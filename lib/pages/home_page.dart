@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
@@ -8,7 +7,7 @@ class HomePage extends StatefulWidget {
   final String appDataPath;
   Map<String, dynamic> library;
 
-  HomePage({required this.appDataPath, required this.library});
+  HomePage({super.key, required this.appDataPath, required this.library});
 
   @override
   _HomePageState createState() => _HomePageState();
@@ -55,8 +54,6 @@ class _HomePageState extends State<HomePage> {
   Future<List<Map<String, dynamic>>> _getSongsList(
       String libraryPath, String thisWeekPath) async {
     List<Map<String, dynamic>> songs = [];
-    int songNumber = 1;
-
     Directory libraryDir = Directory(libraryPath);
     Directory thisWeekDir = Directory(thisWeekPath);
 
@@ -66,12 +63,18 @@ class _HomePageState extends State<HomePage> {
       for (FileSystemEntity file in files) {
         if (file is File && file.path.endsWith('.txt')) {
           String songName = file.path.split('/').last.split('.').first;
-          bool isChecked =
-              await File('${thisWeekDir.path}/$songName.jpg').exists();
-          songs.add(
-              {'name': songName, 'number': songNumber, 'checked': isChecked});
-          songNumber++;
+          bool isChecked = await File('${thisWeekDir.path}/$songName.jpg').exists();
+          bool hasImage = await File('${libraryDir.path}/$songName.jpg').exists();
+          songs.add({'name': songName, 'checked': isChecked, 'hasImage': hasImage});
         }
+      }
+
+      // Sort songs alphabetically by name
+      songs.sort((a, b) => a['name'].compareTo(b['name']));
+
+      // Update the songNumber after sorting
+      for (int i = 0; i < songs.length; i++) {
+        songs[i]['number'] = i + 1;
       }
     }
 
@@ -95,8 +98,7 @@ class _HomePageState extends State<HomePage> {
       Set<String>? commonSongs;
       for (var word in queryWords) {
         if (widget.library.containsKey(word)) {
-          Set<String> wordSongs =
-              Set.from(List<String>.from(widget.library[word]!));
+          Set<String> wordSongs = Set.from(List<String>.from(widget.library[word]!));
           if (commonSongs == null) {
             commonSongs = wordSongs;
           } else {
@@ -114,35 +116,61 @@ class _HomePageState extends State<HomePage> {
     int songNumber = 1;
     for (var songName in songNamesSet) {
       bool isChecked = await File('${thisWeekDir.path}/$songName.jpg').exists();
-      filteredSongs
-          .add({'name': songName, 'number': songNumber, 'checked': isChecked});
+      bool hasImage = await File('${widget.appDataPath}/library/$songName.jpg').exists();
+      filteredSongs.add({'name': songName, 'number': songNumber, 'checked': isChecked, 'hasImage': hasImage});
       songNumber++;
     }
+
+    // Sort filtered songs alphabetically by name
+    filteredSongs.sort((a, b) => a['name'].compareTo(b['name']));
+
+    for (int i = 0; i < filteredSongs.length; i++) {
+        filteredSongs[i]['number'] = i + 1;
+      }
 
     setState(() {
       songsList = filteredSongs;
     });
   }
 
-  void _handleCheckboxChange(String songName, bool isChecked) async {
-    Directory libraryDir = Directory('${widget.appDataPath}/library');
-    Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
+ void _handleCheckboxChange(String songName, bool isChecked) async {
+  Directory libraryDir = Directory('${widget.appDataPath}/library');
+  Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
 
-    String imageFilePath = '${libraryDir.path}/$songName.jpg';
-    String destinationPath = '${thisWeekDir.path}/$songName.jpg';
+  // Get all files in the library folder
+  List<FileSystemEntity> libraryFiles = libraryDir.listSync();
+  List<String> matchingFiles = [];
 
-    if (isChecked) {
-      if (await File(imageFilePath).exists()) {
-        await File(imageFilePath).copy(destinationPath);
-        _showFlashMessage('$songName is copied to this week folder');
+  // Find all JPG files that start with the song name
+  for (var file in libraryFiles) {
+    if (file is File && file.path.endsWith('.jpg') && file.path.contains(RegExp('^${libraryDir.path}/$songName.*\.jpg\$'))) {
+      matchingFiles.add(file.path);
+    }
+  }
+
+  if (isChecked) {
+    for (String filePath in matchingFiles) {
+      String fileName = filePath.split('/').last;
+      String destinationPath = '${thisWeekDir.path}/$fileName';
+
+      if (await File(filePath).exists()) {
+        await File(filePath).copy(destinationPath);
       }
-    } else {
+    }
+     _showFlashMessage('$songName is copied to this week folder');
+  } else {
+    for (String filePath in matchingFiles) {
+      String fileName = filePath.split('/').last;
+      String destinationPath = '${thisWeekDir.path}/$fileName';
+
       if (await File(destinationPath).exists()) {
         await File(destinationPath).delete();
-        _showFlashMessage('$songName is deleted from this week folder');
+        _showFlashMessage('$fileName is deleted from this week folder');
       }
     }
   }
+}
+
 
   void _showFlashMessage(String message) {
     final snackBar = SnackBar(
@@ -159,8 +187,7 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Dictionary Not Found'),
-          content: const Text(
-              'No dictionary for search found. Please add the fileDict.json file to the appdata folder.'),
+          content: const Text('No dictionary for search found. Please add the fileDict.json file to the appdata folder.'),
           actions: <Widget>[
             TextButton(
               child: const Text('OK'),
@@ -203,7 +230,7 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Colors.deepPurple,
       ),
       body: isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
                 Padding(
@@ -212,7 +239,7 @@ class _HomePageState extends State<HomePage> {
                     decoration: InputDecoration(
                       labelText: "Search for a song",
                       suffixIcon: IconButton(
-                        icon: Icon(Icons.clear),
+                        icon: const Icon(Icons.clear),
                         onPressed: () {
                           _filterSongs('');
                         },
@@ -233,37 +260,45 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Expanded(
                   child: songsList.isEmpty
-                      ? Center(
-                          child: const Text('No songs found in the library folder.',
-                          style: TextStyle(color: Color.fromARGB(249, 0, 0, 0)
-        ),),
+                      ? const Center(
+                          child: Text(
+                            'No songs found in the library folder.',
+                            style: TextStyle(color: Color.fromARGB(249, 0, 0, 0)),
+                          ),
                         )
                       : ListView.builder(
                           itemCount: songsList.length,
                           itemBuilder: (context, index) {
                             return Card(
-                              margin: EdgeInsets.symmetric(
-                                  horizontal: 10, vertical: 5),
+                              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               child: ListTile(
                                 leading: CircleAvatar(
                                   backgroundColor: Colors.deepPurple,
                                   child: Text(
                                     '${songsList[index]['number']}',
-                                    style: TextStyle(color: Colors.white),
+                                    style: const TextStyle(color: Colors.white),
                                   ),
                                 ),
-                                title: Text(songsList[index]['name']),
+                                title: Text(
+                                  songsList[index]['name'],
+                                  style: TextStyle(
+                                    color: songsList[index]['hasImage']
+                                        ? Colors.black
+                                        : Colors.red,
+                                  ),
+                                ),
                                 trailing: Checkbox(
                                   value: songsList[index]['checked'],
-                                  onChanged: (bool? value) {
-                                    if (value != null) {
-                                      setState(() {
-                                        songsList[index]['checked'] = value;
-                                        _handleCheckboxChange(
-                                            songsList[index]['name'], value);
-                                      });
-                                    }
-                                  },
+                                  onChanged: songsList[index]['hasImage']
+                                      ? (bool? value) {
+                                          if (value != null) {
+                                            setState(() {
+                                              songsList[index]['checked'] = value;
+                                              _handleCheckboxChange(songsList[index]['name'], value);
+                                            });
+                                          }
+                                        }
+                                      : null, // Disable checkbox if no image file
                                 ),
                               ),
                             );

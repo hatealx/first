@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_brace_in_string_interps
+
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -6,7 +8,7 @@ import 'view_song_page.dart'; // Import the new page
 class ThisWeekPage extends StatefulWidget {
   final String appDataPath;
 
-  ThisWeekPage({required this.appDataPath});
+  const ThisWeekPage({super.key, required this.appDataPath});
 
   @override
   _ThisWeekPageState createState() => _ThisWeekPageState();
@@ -36,8 +38,17 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
         for (FileSystemEntity file in files) {
           if (file is File && file.path.endsWith('.jpg')) {
             String songName = file.path.split('/').last.split('.').first;
-            songs.add({'name': songName, 'number': songNumber, 'checked': true, 'path': file.path});
-            songNumber++;
+            Directory library= Directory('${widget.appDataPath}/library');
+            File validFile = File('${library.path}/${songName}.txt');
+            if (await validFile.exists())
+            {
+               songs.add({'name': songName, 'number': songNumber, 'checked': true, 'path': file.path});
+               songNumber++;
+            }
+
+
+
+           
           }
         }
 
@@ -64,23 +75,34 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
     } catch (e) {
       // Handle errors here
       print("Error loading songs: $e");
-      throw e; // Re-throw to notify FutureBuilder of the error
+      rethrow; // Re-throw to notify FutureBuilder of the error
     }
   }
 
-  void _handleCheckboxChange(String songName, bool isChecked) async {
-    Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
+ void _handleCheckboxChange(String songName, bool isChecked) async {
+  Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
 
-    String filePath = '${thisWeekDir.path}/$songName.jpg';
+  // Get all files in the this week folder
+  List<FileSystemEntity> thisWeekFiles = thisWeekDir.listSync();
+  List<String> deletedFiles = [];
 
-    if (!isChecked) {
-      if (await File(filePath).exists()) {
-        await File(filePath).delete();
-        _showFlashMessage('$songName is deleted from this week folder');
-        await _loadThisWeekSongs();  // Reload the list after deleting
+  if (!isChecked) {
+    for (var file in thisWeekFiles) {
+      if (file is File && file.path.endsWith('.jpg') && file.path.contains(RegExp('^${thisWeekDir.path}/$songName.*\.jpg\$'))) {
+        await file.delete();
+        deletedFiles.add(file.path);
       }
     }
+    
+    if (deletedFiles.isNotEmpty) {
+      _showFlashMessage('$songName images are deleted from this week folder');
+    } else {
+      _showFlashMessage('No images found for $songName in this week folder');
+    }
+    
+    await _loadThisWeekSongs();  // Reload the list after deleting
   }
+}
 
   void _showFlashMessage(String message) {
     final snackBar = SnackBar(
@@ -123,29 +145,86 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
     await orderFile.writeAsString(orderContent);
   }
 
-  void _viewSongImage(String imagePath) {
+  
+
+  Future<void> _confirmDeleteAllSongs() async {
+    bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: const Color.fromRGBO(10, 10, 10, 0.795),
+          title: const Text('Confirm Delete', style: TextStyle(color: Color.fromRGBO(186, 77, 77, 0.792)),),
+          content: const Text('Are you sure you want to delete all songs from this week?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Delete',style: TextStyle(color: Color.fromARGB(200, 205, 23, 23))),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      await _deleteAllSongs();
+    }
+  }
+
+  Future<void> _deleteAllSongs() async {
+    try {
+      Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
+      List<FileSystemEntity> files = await thisWeekDir.list().toList();
+
+      for (FileSystemEntity file in files) {
+        if (file is File && file.path.endsWith('.jpg')) {
+          await file.delete();
+        }
+      }
+
+      File orderFile = File('${thisWeekDir.path}/order.json');
+      if (await orderFile.exists()) {
+        await orderFile.delete();
+      }
+
+      _showFlashMessage('All songs deleted from this week folder');
+      await _loadThisWeekSongs();  // Reload the list after deleting
+    } catch (e) {
+      print("Error deleting songs: $e");
+      // Optionally, show a flash message or a dialog to notify the user
+    }
+  }
+
+
+  void _viewSongImage(int index) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ViewSongPage(imagePath: imagePath),
+        builder: (context) => ViewSongPage(
+          songs: songsList, // Pass the entire songsList
+          initialIndex: index,
+        ),
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('This Week Songs',
-         style: TextStyle(color: Color.fromARGB(250, 243, 242, 242)
-        ),
+         style: TextStyle(color: Color.fromARGB(250, 243, 242, 242)),
         ),
         centerTitle: true,
         backgroundColor: Colors.deepPurple,
         actions: [
           IconButton(
             icon: Icon(isReorderMode ? Icons.check : Icons.edit, 
-            color: Color.fromARGB(250, 239, 109, 109),
+            color: const Color.fromARGB(250, 239, 109, 109),
             size: 25.0,
             ),
             onPressed: _toggleReorderMode,
@@ -156,7 +235,7 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
         future: _songsFuture,
         builder: (BuildContext context, AsyncSnapshot<void> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
+            return const Center(
               child: CircularProgressIndicator(),
             );
           } else if (snapshot.hasError) {
@@ -171,13 +250,13 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
                       for (int index = 0; index < songsList.length; index++)
                         Card(
                           key: ValueKey(songsList[index]['name']),
-                          margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           child: ListTile(
                             leading: CircleAvatar(
                               backgroundColor: Colors.deepPurple,
                               child: Text(
                                 '${songsList[index]['number']}',
-                                style: TextStyle(color: Colors.white),
+                                style: const TextStyle(color: Colors.white),
                               ),
                             ),
                             title: Text(songsList[index]['name']),
@@ -185,7 +264,7 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: Icon(Icons.visibility),
+                                  icon: const Icon(Icons.visibility),
                                   onPressed: () => _viewSongImage(songsList[index]['path']),
                                 ),
                                 Checkbox(
@@ -210,13 +289,13 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
                         itemCount: songsList.length,
                         itemBuilder: (context, index) {
                           return Card(
-                            margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             child: ListTile(
                               leading: CircleAvatar(
                                 backgroundColor: Colors.deepPurple,
                                 child: Text(
                                   '${songsList[index]['number']}',
-                                  style: TextStyle(color: Colors.white),
+                                  style: const TextStyle(color: Colors.white),
                                 ),
                               ),
                               title: Text(songsList[index]['name']),
@@ -224,8 +303,8 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    icon: Icon(Icons.visibility),
-                                    onPressed: () => _viewSongImage(songsList[index]['path']),
+                                    icon: const Icon(Icons.visibility),
+                                    onPressed: () => _viewSongImage(index),
                                   ),
                                   Checkbox(
                                     value: songsList[index]['checked'],
@@ -246,12 +325,17 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
                       )
                     : const Center(
                         child: Text('No songs found in this week folder.',
-                        style: TextStyle(color: Color.fromARGB(249, 0, 0, 0)
-        ),
+                        style: TextStyle(color: Color.fromARGB(249, 0, 0, 0)),
                         ),
                       );
           }
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _confirmDeleteAllSongs,
+        backgroundColor: Colors.red,
+        tooltip: 'Delete All Songs',
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
     );
   }
