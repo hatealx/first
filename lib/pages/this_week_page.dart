@@ -24,60 +24,56 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
     super.initState();
     _songsFuture = _loadThisWeekSongs();
   }
+Future<void> _loadThisWeekSongs() async {
+  try {
+    Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
+    File orderFile = File('${thisWeekDir.path}/order.json');
 
-  Future<void> _loadThisWeekSongs() async {
-    try {
-      Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
-      File orderFile = File('${thisWeekDir.path}/order.json');
+    if (await thisWeekDir.exists()) {
+      List<FileSystemEntity> files = await thisWeekDir.list().toList();
+      Map<String, List<String>> songImages = {};
+      int songNumber = 1;
 
-      if (await thisWeekDir.exists()) {
-        List<FileSystemEntity> files = await thisWeekDir.list().toList();
-        List<Map<String, dynamic>> songs = [];
-        int songNumber = 1;
-
-        for (FileSystemEntity file in files) {
-          if (file is File && file.path.endsWith('.jpg')) {
-            String songName = file.path.split('/').last.split('.').first;
-            Directory library= Directory('${widget.appDataPath}/library');
-            File validFile = File('${library.path}/${songName}.txt');
-            if (await validFile.exists())
-            {
-               songs.add({'name': songName, 'number': songNumber, 'checked': true, 'path': file.path});
-               songNumber++;
+      for (FileSystemEntity file in files) {
+        if (file is File && file.path.endsWith('.jpg')) {
+          String fullFileName = file.path.split('/').last;
+          String songName = fullFileName.split('.').first;
+          Directory library = Directory('${widget.appDataPath}/library');
+          File validFile = File('${library.path}/${songName}.txt');
+          if (await validFile.exists()) {
+            if (!songImages.containsKey(songName)) {
+              songImages[songName] = [];
             }
-
-
-
-           
+            songImages[songName]!.add(file.path);
           }
         }
-
-        if (await orderFile.exists()) {
-          String orderContent = await orderFile.readAsString();
-          List<dynamic> savedOrder = jsonDecode(orderContent);
-
-          songs.sort((a, b) {
-            int indexA = savedOrder.indexWhere((song) => song['name'] == a['name']);
-            int indexB = savedOrder.indexWhere((song) => song['name'] == b['name']);
-            return indexA.compareTo(indexB);
-          });
-
-          // Update song numbers based on saved order
-          for (int i = 0; i < songs.length; i++) {
-            songs[i]['number'] = i + 1;
-          }
-        }
-
-        setState(() {
-          songsList = songs;
-        });
       }
-    } catch (e) {
-      // Handle errors here
-      print("Error loading songs: $e");
-      rethrow; // Re-throw to notify FutureBuilder of the error
+
+      List<Map<String, dynamic>> songs = [];
+      songImages.forEach((songName, imagePaths) {
+        songs.add({
+          'name': songName,
+          'number': songNumber,
+          'checked': true,
+          'images': imagePaths,
+        });
+        songNumber++;
+      });
+
+      // Sort and update numbers as before...
+
+      setState(() {
+        songsList = songs;
+      });
+
+      // Debug print
+      print('Loaded songs: ${songsList.map((s) => '${s['name']} (${s['images'].length} images)').join(', ')}');
     }
+  } catch (e) {
+    print("Error loading songs: $e");
+    rethrow;
   }
+}
 
  void _handleCheckboxChange(String songName, bool isChecked) async {
   Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
@@ -200,17 +196,18 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
 
 
   void _viewSongImage(int index) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ViewSongPage(
-          songs: songsList, // Pass the entire songsList
-          initialIndex: index,
-        ),
+  print('Viewing song at index $index: ${songsList[index]['name']}');
+  print('Number of images: ${songsList[index]['images'].length}');
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ViewSongPage(
+        songs: songsList,
+        initialSongIndex: index,
       ),
-    );
-  }
-
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {

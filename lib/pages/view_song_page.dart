@@ -4,55 +4,108 @@ import 'dart:async';
 
 class ViewSongPage extends StatefulWidget {
   final List<Map<String, dynamic>> songs;
-  final int initialIndex;
+  final int initialSongIndex;
 
-  ViewSongPage({required this.songs, required this.initialIndex});
+  ViewSongPage({required this.songs, required this.initialSongIndex});
 
   @override
   _ViewSongPageState createState() => _ViewSongPageState();
 }
 
 class _ViewSongPageState extends State<ViewSongPage> {
-  late int _currentIndex;
+  late int _currentSongIndex;
+  late int _currentImageIndex;
   bool _showIndex = true;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex;
+    _currentSongIndex = widget.initialSongIndex;
+    _currentImageIndex = 0;
     _startHideIndexTimer();
+    _printDebugInfo();
   }
 
-  void _onHorizontalDrag(DragEndDetails details) {
+  void _printDebugInfo() {
+    print('Current song: ${widget.songs[_currentSongIndex]['name']}');
+    print('Number of images: ${widget.songs[_currentSongIndex]['images'].length}');
+    print('Image paths: ${widget.songs[_currentSongIndex]['images']}');
+  }
+
+  void _onHorizontalDragEnd(DragEndDetails details) {
     if (details.primaryVelocity != null) {
       if (details.primaryVelocity! < 0) {
         // Swiped left
-        _goToNextImage();
+        _goToNextSong();
       } else if (details.primaryVelocity! > 0) {
         // Swiped right
-        _goToPreviousImage();
+        _goToPreviousSong();
       }
     }
   }
 
-  void _goToNextImage() {
-    if (_currentIndex < widget.songs.length - 1) {
+  void _onVerticalDragUpdate(DragUpdateDetails details) {
+    print('Vertical drag detected: ${details.delta.dy}');
+    if (details.delta.dy < -10) {
+      // Swiped up
+      _goToNextImage();
+    } else if (details.delta.dy > 10) {
+      // Swiped down
+      _goToPreviousImage();
+    }
+  }
+
+  void _goToNextSong() {
+    if (_currentSongIndex < widget.songs.length - 1) {
       setState(() {
-        _currentIndex++;
+        _currentSongIndex++;
+        _currentImageIndex = 0;
         _showIndex = true;
       });
       _startHideIndexTimer();
+      _printDebugInfo();
+    }
+  }
+
+  void _goToPreviousSong() {
+    if (_currentSongIndex > 0) {
+      setState(() {
+        _currentSongIndex--;
+        _currentImageIndex = 0;
+        _showIndex = true;
+      });
+      _startHideIndexTimer();
+      _printDebugInfo();
+    }
+  }
+
+  void _goToNextImage() {
+    List<String> images = widget.songs[_currentSongIndex]['images'];
+    print('Attempting to go to next image. Current index: $_currentImageIndex, Total images: ${images.length}');
+    if (_currentImageIndex < images.length - 1) {
+      setState(() {
+        _currentImageIndex++;
+        _showIndex = true;
+      });
+      _startHideIndexTimer();
+      print('Moved to next image. New index: $_currentImageIndex');
+    } else {
+      print('Already at the last image');
     }
   }
 
   void _goToPreviousImage() {
-    if (_currentIndex > 0) {
+    print('Attempting to go to previous image. Current index: $_currentImageIndex');
+    if (_currentImageIndex > 0) {
       setState(() {
-        _currentIndex--;
+        _currentImageIndex--;
         _showIndex = true;
       });
       _startHideIndexTimer();
+      print('Moved to previous image. New index: $_currentImageIndex');
+    } else {
+      print('Already at the first image');
     }
   }
 
@@ -82,18 +135,20 @@ class _ViewSongPageState extends State<ViewSongPage> {
 
   @override
   Widget build(BuildContext context) {
+    List<String> images = widget.songs[_currentSongIndex]['images'];
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.songs[_currentIndex]['name']),
+        title: Text(widget.songs[_currentSongIndex]['name']),
       ),
       body: GestureDetector(
         onTap: _handleTap,
-        onHorizontalDragEnd: _onHorizontalDrag,
+        onHorizontalDragEnd: _onHorizontalDragEnd,
+        onVerticalDragUpdate: _onVerticalDragUpdate,
         child: Stack(
           children: [
             Center(
               child: Image.file(
-                File(widget.songs[_currentIndex]['path']),
+                File(images[_currentImageIndex]),
                 fit: BoxFit.cover,
               ),
             ),
@@ -107,7 +162,7 @@ class _ViewSongPageState extends State<ViewSongPage> {
                     padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
                     color: Colors.black54,
                     child: Text(
-                      'Song ${_currentIndex + 1} / ${widget.songs.length}',
+                      'Song ${_currentSongIndex + 1} / ${widget.songs.length} - Image ${_currentImageIndex + 1} / ${images.length}',
                       style: TextStyle(color: Colors.white, fontSize: 16.0),
                     ),
                   ),
