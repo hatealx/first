@@ -285,6 +285,7 @@ class _HomePageState extends State<HomePage> {
                                     color: songsList[index]['hasImage']
                                         ? Colors.black
                                         : Colors.red,
+                                        fontWeight: FontWeight.bold
                                   ),
                                 ),
                                 trailing: Checkbox(

@@ -6,7 +6,7 @@ class ViewSongPage extends StatefulWidget {
   final List<Map<String, dynamic>> songs;
   final int initialSongIndex;
 
-  ViewSongPage({required this.songs, required this.initialSongIndex});
+  const ViewSongPage({Key? key, required this.songs, required this.initialSongIndex}) : super(key: key);
 
   @override
   _ViewSongPageState createState() => _ViewSongPageState();
@@ -15,6 +15,7 @@ class ViewSongPage extends StatefulWidget {
 class _ViewSongPageState extends State<ViewSongPage> {
   late int _currentSongIndex;
   late int _currentImageIndex;
+  late PageController _pageController;
   bool _showIndex = true;
   Timer? _timer;
 
@@ -23,6 +24,12 @@ class _ViewSongPageState extends State<ViewSongPage> {
     super.initState();
     _currentSongIndex = widget.initialSongIndex;
     _currentImageIndex = 0;
+    _pageController = PageController(initialPage: _currentImageIndex);
+    _pageController.addListener(() {
+      setState(() {
+        _currentImageIndex = _pageController.page?.round() ?? _currentImageIndex;
+      });
+    });
     _startHideIndexTimer();
     _printDebugInfo();
   }
@@ -34,25 +41,11 @@ class _ViewSongPageState extends State<ViewSongPage> {
   }
 
   void _onHorizontalDragEnd(DragEndDetails details) {
-    if (details.primaryVelocity != null) {
-      if (details.primaryVelocity! < 0) {
-        // Swiped left
-        _goToNextSong();
-      } else if (details.primaryVelocity! > 0) {
-        // Swiped right
-        _goToPreviousSong();
-      }
-    }
-  }
-
-  void _onVerticalDragUpdate(DragUpdateDetails details) {
-    print('Vertical drag detected: ${details.delta.dy}');
-    if (details.delta.dy < -10) {
-      // Swiped up
-      _goToNextImage();
-    } else if (details.delta.dy > 10) {
-      // Swiped down
-      _goToPreviousImage();
+    if (details.primaryVelocity == null) return;
+    if (details.primaryVelocity! < 0) {
+      _goToNextSong();
+    } else if (details.primaryVelocity! > 0) {
+      _goToPreviousSong();
     }
   }
 
@@ -60,7 +53,7 @@ class _ViewSongPageState extends State<ViewSongPage> {
     if (_currentSongIndex < widget.songs.length - 1) {
       setState(() {
         _currentSongIndex++;
-        _currentImageIndex = 0;
+        _pageController.jumpToPage(0);
         _showIndex = true;
       });
       _startHideIndexTimer();
@@ -72,40 +65,11 @@ class _ViewSongPageState extends State<ViewSongPage> {
     if (_currentSongIndex > 0) {
       setState(() {
         _currentSongIndex--;
-        _currentImageIndex = 0;
+        _pageController.jumpToPage(0);
         _showIndex = true;
       });
       _startHideIndexTimer();
       _printDebugInfo();
-    }
-  }
-
-  void _goToNextImage() {
-    List<String> images = widget.songs[_currentSongIndex]['images'];
-    print('Attempting to go to next image. Current index: $_currentImageIndex, Total images: ${images.length}');
-    if (_currentImageIndex < images.length - 1) {
-      setState(() {
-        _currentImageIndex++;
-        _showIndex = true;
-      });
-      _startHideIndexTimer();
-      print('Moved to next image. New index: $_currentImageIndex');
-    } else {
-      print('Already at the last image');
-    }
-  }
-
-  void _goToPreviousImage() {
-    print('Attempting to go to previous image. Current index: $_currentImageIndex');
-    if (_currentImageIndex > 0) {
-      setState(() {
-        _currentImageIndex--;
-        _showIndex = true;
-      });
-      _startHideIndexTimer();
-      print('Moved to previous image. New index: $_currentImageIndex');
-    } else {
-      print('Already at the first image');
     }
   }
 
@@ -130,6 +94,7 @@ class _ViewSongPageState extends State<ViewSongPage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -138,19 +103,42 @@ class _ViewSongPageState extends State<ViewSongPage> {
     List<String> images = widget.songs[_currentSongIndex]['images'];
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.songs[_currentSongIndex]['name']),
+        title: Text(widget.songs[_currentSongIndex]['name'], style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.deepPurple, // Deep color for the app bar
       ),
       body: GestureDetector(
         onTap: _handleTap,
         onHorizontalDragEnd: _onHorizontalDragEnd,
-        onVerticalDragUpdate: _onVerticalDragUpdate,
         child: Stack(
+          fit: StackFit.expand,
           children: [
-            Center(
-              child: Image.file(
-                File(images[_currentImageIndex]),
-                fit: BoxFit.cover,
-              ),
+            PageView.builder(
+              controller: _pageController,
+              scrollDirection: Axis.vertical,
+              itemCount: images.length,
+              itemBuilder: (context, index) {
+                return AnimatedSwitcher(
+                  duration: Duration(milliseconds: 300),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(
+                        scale: animation,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Image.file(
+                    File(images[index]),
+                    key: ValueKey<String>(images[index]),
+                    fit: BoxFit.cover, // Cover to fill the screen nicely
+                    errorBuilder: (context, error, stackTrace) {
+                      print('Error loading image: $error');
+                      return Center(child: Text('Error loading image', style: TextStyle(color: Colors.red, fontSize: 16.0)));
+                    },
+                  ),
+                );
+              },
             ),
             if (_showIndex)
               Positioned(
@@ -160,10 +148,13 @@ class _ViewSongPageState extends State<ViewSongPage> {
                 child: Center(
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
-                    color: Colors.black54,
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8.0), // Rounded corners
+                    ),
                     child: Text(
                       'Song ${_currentSongIndex + 1} / ${widget.songs.length} - Image ${_currentImageIndex + 1} / ${images.length}',
-                      style: TextStyle(color: Colors.white, fontSize: 16.0),
+                      style: TextStyle(color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
