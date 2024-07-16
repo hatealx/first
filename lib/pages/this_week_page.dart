@@ -39,7 +39,6 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
         if (entity is File && entity.path.endsWith('.jpg')) {
           String fileName = entity.path.split('/').last;
           String songName = fileName.split('.').first;
-
           File validFile = File('${widget.appDataPath}/library/${songName}.txt');
           if (await validFile.exists()) {
             songImages.putIfAbsent(songName, () => []).add(entity.path);
@@ -327,7 +326,7 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text('${song['images'].length} images'),
+        subtitle: Text('${song['images'].length} pages'),
         trailing: isReorderMode
             ? const Icon(Icons.drag_handle)
             : Checkbox(

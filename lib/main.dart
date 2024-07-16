@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -39,6 +38,7 @@ void main() async {
   }
 
   print(appDataPath);
+
   runApp(MyApp(appDataPath: appDataPath));
 }
 
@@ -50,6 +50,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Music App',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -125,8 +126,14 @@ class _MainScreenState extends State<MainScreen> {
         });
 
         // Find the songs that have been added or removed
-        List<dynamic> addedSongs = newValidSongs.toSet().difference(existingValidSongs.toSet()).toList();
-        List<dynamic> removedSongs = existingValidSongs.toSet().difference(newValidSongs.toSet()).toList();
+        List<dynamic> addedSongs = newValidSongs
+            .toSet()
+            .difference(existingValidSongs.toSet())
+            .toList();
+        List<dynamic> removedSongs = existingValidSongs
+            .toSet()
+            .difference(newValidSongs.toSet())
+            .toList();
 
         // Show a flash message with the songs that have been added or removed
         if (addedSongs.isNotEmpty) {
@@ -181,15 +188,18 @@ class _MainScreenState extends State<MainScreen> {
     return text
         .toLowerCase()
         .replaceAll(RegExp(r'[^\w\s]+'), '') // Remove special characters
-        .replaceAll(RegExp(r'\s+'), ' ') // Replace multiple spaces with a single space
-        .replaceAll(RegExp(r'\r\n|\r|\n'), ' ') // Replace newline characters with a space
+        .replaceAll(
+            RegExp(r'\s+'), ' ') // Replace multiple spaces with a single space
+        .replaceAll(RegExp(r'\r\n|\r|\n'),
+            ' ') // Replace newline characters with a space
         .split(' ') // Split into words
         .where((word) => word.isNotEmpty) // Remove empty words
         .toSet() // Remove duplicates
         .toList();
   }
 
-  void _addWordToLibrary(String word, String fileName, Map<String, dynamic> library) {
+  void _addWordToLibrary(
+      String word, String fileName, Map<String, dynamic> library) {
     if (!library.containsKey(word)) {
       library[word] = [];
     }
@@ -200,7 +210,8 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _saveDictToJson(Map<String, dynamic> library) async {
     File jsonFile = File('${widget.appDataPath}/fileDict.json');
-    String jsonString = const JsonEncoder.withIndent('  ').convert(library); // Use indented JSON for better readability
+    String jsonString = const JsonEncoder.withIndent('  ')
+        .convert(library); // Use indented JSON for better readability
     await jsonFile.writeAsString(jsonString);
   }
 
@@ -211,6 +222,13 @@ class _MainScreenState extends State<MainScreen> {
       backgroundColor: Colors.deepPurpleAccent,
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
+
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
@@ -251,9 +269,5 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  
 }
