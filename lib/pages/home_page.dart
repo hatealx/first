@@ -16,11 +16,20 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> songsList = [];
   bool isLoading = true;
+  late Directory libraryDir;
+  late Directory thisWeekDir;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _requestPermissionAndSetup();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _requestPermissionAndSetup() async {
@@ -30,8 +39,8 @@ class _HomePageState extends State<HomePage> {
     }
 
     if (status.isGranted) {
-      Directory libraryDir = Directory('${widget.appDataPath}/library');
-      Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
+      libraryDir = Directory('${widget.appDataPath}/library');
+      thisWeekDir = Directory('${widget.appDataPath}/this_week');
 
       if (!await libraryDir.exists()) {
         await libraryDir.create();
@@ -46,7 +55,7 @@ class _HomePageState extends State<HomePage> {
       }
 
       setState(() {
-        isLoading = false; // Set loading to false once songs are loaded
+        isLoading = false;
       });
     }
   }
@@ -69,10 +78,8 @@ class _HomePageState extends State<HomePage> {
         }
       }
 
-      // Sort songs alphabetically by name
       songs.sort((a, b) => a['name'].compareTo(b['name']));
 
-      // Update the songNumber after sorting
       for (int i = 0; i < songs.length; i++) {
         songs[i]['number'] = i + 1;
       }
@@ -82,19 +89,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _filterSongs(String query) async {
-    List<Map<String, dynamic>> filteredSongs = [];
-    Set<String> songNamesSet = {};
-    List<String> queryWords = query
-        .toLowerCase()
-        .split(' ')
-        .where((word) => word.isNotEmpty)
-        .toList();
-
-    if (queryWords.isEmpty) {
-      for (var song in widget.library.entries) {
-        songNamesSet.addAll(List<String>.from(song.value));
-      }
+    if (query.isEmpty) {
+      songsList = await _getSongsList(libraryDir.path, thisWeekDir.path);
+      setState(() {}); // Trigger a rebuild with the updated songsList
     } else {
+      List<Map<String, dynamic>> filteredSongs = [];
+      Set<String> songNamesSet = {};
+      List<String> queryWords = query
+          .toLowerCase()
+          .split(' ')
+          .where((word) => word.isNotEmpty)
+          .toList();
+
       Set<String>? commonSongs;
       for (var word in queryWords) {
         if (widget.library.containsKey(word)) {
@@ -110,67 +116,66 @@ class _HomePageState extends State<HomePage> {
       if (commonSongs != null) {
         songNamesSet = commonSongs;
       }
-    }
 
-    Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
-    int songNumber = 1;
-    for (var songName in songNamesSet) {
-      bool isChecked = await File('${thisWeekDir.path}/$songName.jpg').exists();
-      bool hasImage = await File('${widget.appDataPath}/library/$songName.jpg').exists();
-      filteredSongs.add({'name': songName, 'number': songNumber, 'checked': isChecked, 'hasImage': hasImage});
-      songNumber++;
-    }
+      int songNumber = 1;
+      for (var songName in songNamesSet) {
+        bool isChecked = await File('${thisWeekDir.path}/$songName.jpg').exists();
+        bool hasImage = await File('${libraryDir.path}/$songName.jpg').exists();
+        filteredSongs.add({'name': songName, 'number': songNumber, 'checked': isChecked, 'hasImage': hasImage});
+        songNumber++;
+      }
 
-    // Sort filtered songs alphabetically by name
-    filteredSongs.sort((a, b) => a['name'].compareTo(b['name']));
+      filteredSongs.sort((a, b) => a['name'].compareTo(b['name']));
 
-    for (int i = 0; i < filteredSongs.length; i++) {
+      for (int i = 0; i < filteredSongs.length; i++) {
         filteredSongs[i]['number'] = i + 1;
       }
 
-    setState(() {
-      songsList = filteredSongs;
-    });
-  }
-
- void _handleCheckboxChange(String songName, bool isChecked) async {
-  Directory libraryDir = Directory('${widget.appDataPath}/library');
-  Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
-
-  // Get all files in the library folder
-  List<FileSystemEntity> libraryFiles = libraryDir.listSync();
-  List<String> matchingFiles = [];
-
-  // Find all JPG files that start with the song name
-  for (var file in libraryFiles) {
-    if (file is File && file.path.endsWith('.jpg') && file.path.contains(RegExp('^${libraryDir.path}/$songName.*\.jpg\$'))) {
-      matchingFiles.add(file.path);
+      setState(() {
+        songsList = filteredSongs;
+      });
     }
   }
 
-  if (isChecked) {
-    for (String filePath in matchingFiles) {
-      String fileName = filePath.split('/').last;
-      String destinationPath = '${thisWeekDir.path}/$fileName';
+  void _clearSearch() {
+    _searchController.clear();
+    _filterSongs('');
+  }
 
-      if (await File(filePath).exists()) {
-        await File(filePath).copy(destinationPath);
+  void _handleCheckboxChange(String songName, bool isChecked) async {
+    List<FileSystemEntity> libraryFiles = libraryDir.listSync();
+    List<String> matchingFiles = [];
+
+    for (var file in libraryFiles) {
+      if (file is File && file.path.endsWith('.jpg') && file.path.contains(RegExp('^${libraryDir.path}/$songName.*.jpg\$'))) {
+        matchingFiles.add(file.path);
       }
     }
-     _showFlashMessage('$songName is copied to this week folder');
-  } else {
-    for (String filePath in matchingFiles) {
-      String fileName = filePath.split('/').last;
-      String destinationPath = '${thisWeekDir.path}/$fileName';
 
-      if (await File(destinationPath).exists()) {
-        await File(destinationPath).delete();
-        _showFlashMessage('$fileName is deleted from this week folder');
+    if (isChecked) {
+      for (String filePath in matchingFiles) {
+        String fileName = filePath.split('/').last;
+        String destinationPath = '${thisWeekDir.path}/$fileName';
+
+        if (await File(filePath).exists()) {
+          await File(filePath).copy(destinationPath);
+        }
+      }
+      _showFlashMessage('$songName is copied to this week folder');
+    } else {
+      for (String filePath in matchingFiles) {
+        String fileName = filePath.split('/').last;
+        String destinationPath = '${thisWeekDir.path}/$fileName';
+
+        if (await File(destinationPath).exists()) {
+          await File(destinationPath).delete();
+          _showFlashMessage('$fileName is deleted from this week folder');
+        }
       }
     }
+    imageCache.clear();
+    imageCache.clearLiveImages();
   }
-}
-
 
   void _showFlashMessage(String message) {
     final snackBar = SnackBar(
@@ -224,39 +229,32 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        foregroundColor: Colors.white,
-        title: const Text('Song Library'),
-        centerTitle: true,
-        backgroundColor: Colors.deepPurple,
+
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      labelText: "Search for a song",
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _filterSongs('');
-                        },
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[200],
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: "Search for a song",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
-                    onTap: () async {
-                      await _loadSongsFromJson();
-                    },
-                    onChanged: (text) {
-                      _filterSongs(text);
-                    },
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: _clearSearch,
+                    ),
                   ),
+                  onTap: () async {
+                    await _loadSongsFromJson();
+                  },
+                  onChanged: (text) {
+                    _filterSongs(text);
+                  },
                 ),
                 Expanded(
                   child: songsList.isEmpty
@@ -285,7 +283,7 @@ class _HomePageState extends State<HomePage> {
                                     color: songsList[index]['hasImage']
                                         ? Colors.black
                                         : Colors.red,
-                                        fontWeight: FontWeight.bold
+                                    fontWeight: FontWeight.bold
                                   ),
                                 ),
                                 trailing: Checkbox(
@@ -299,7 +297,7 @@ class _HomePageState extends State<HomePage> {
                                             });
                                           }
                                         }
-                                      : null, // Disable checkbox if no image file
+                                      : null,
                                 ),
                               ),
                             );

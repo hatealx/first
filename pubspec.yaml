@@ -30,12 +30,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  permission_handler: ^8.1.4+2
+  permission_handler: ^11.3.1
   path_provider: 2.0.11
-  image_editor: ^1.5.1
   photo_view: ^0.14.0
-  image_watermark: ^0.1.0
-  image_gallery_saver: ^1.6.7
+  image_painter: ^0.7.1
+  get: ^4.6.6
+  shared_preferences: ^2.0.13
+  
 
   
  

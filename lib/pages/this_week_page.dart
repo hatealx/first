@@ -6,7 +6,7 @@ import 'view_song_page.dart';
 class ThisWeekPage extends StatefulWidget {
   final String appDataPath;
 
-  const ThisWeekPage({Key? key, required this.appDataPath}) : super(key: key);
+  const ThisWeekPage({super.key, required this.appDataPath});
 
   @override
   _ThisWeekPageState createState() => _ThisWeekPageState();
@@ -23,9 +23,12 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
     _songsFuture = _loadThisWeekSongs();
   }
 
+
   Future<void> _loadThisWeekSongs() async {
     try {
+  
       Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
+          print('This week directory: ${thisWeekDir.path}');
       if (!await thisWeekDir.exists()) {
         print("This week directory does not exist");
         return;
@@ -39,7 +42,7 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
         if (entity is File && entity.path.endsWith('.jpg')) {
           String fileName = entity.path.split('/').last;
           String songName = fileName.split('.').first;
-          File validFile = File('${widget.appDataPath}/library/${songName}.txt');
+          File validFile = File('${widget.appDataPath}/library/$songName.txt');
           if (await validFile.exists()) {
             songImages.putIfAbsent(songName, () => []).add(entity.path);
           }
@@ -135,6 +138,9 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
         _showFlashMessage(message);
 
         await _loadThisWeekSongs();
+        imageCache.clear();
+        imageCache.clearLiveImages();
+        
       }
     } catch (e) {
       print("Error handling checkbox change: $e");
@@ -292,8 +298,8 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _confirmDeleteAllSongs,
-        child: const Icon(Icons.delete),
         backgroundColor: const Color.fromARGB(255, 223, 94, 85),
+        child: const Icon(Icons.delete),
       ),
     );
   }
@@ -301,14 +307,14 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
   Widget _buildSongTile(Map<String, dynamic> song, bool isReorderMode) {
     return Container(
       key: ValueKey(song['name']),
-      constraints: BoxConstraints(minHeight: 80),
+      constraints: const BoxConstraints(minHeight: 80),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: Color.fromARGB(72, 166, 127, 232).withOpacity(0.1),
+        color: const Color.fromARGB(72, 166, 127, 232).withOpacity(0.1),
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Color.fromARGB(40, 218, 207, 237).withOpacity(0.1),
+            color: const Color.fromARGB(40, 218, 207, 237).withOpacity(0.1),
             blurRadius: 5,
             offset: const Offset(0, 3),
           ),

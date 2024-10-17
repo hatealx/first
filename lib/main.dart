@@ -4,48 +4,80 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'pages/home_page.dart';
 import 'pages/this_week_page.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  String appDataPath = "";
-  List<Directory>? externalDirs = await getExternalStorageDirectories();
+  runApp(const MyApp());
+}
 
-  if (externalDirs != null && externalDirs.isNotEmpty) {
-    Directory externalDir = externalDirs.first;
-    appDataPath = '${externalDir.parent.parent.parent.parent.path}/appdata';
+class MyApp extends StatefulWidget {
+  const MyApp({Key? key}) : super(key: key);
 
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  String? baseDataPath;
+  bool isLoading = true;
+  String? errorMessage;
+  String? selectedLibrary;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
     try {
-      Directory appDataDir = Directory(appDataPath);
-      if (!await appDataDir.exists()) {
-        await appDataDir.create(recursive: true);
-        print("AppData directory created at: $appDataPath");
-      }
-      Directory libraryDir = Directory('$appDataPath/library');
-      if (!await libraryDir.exists()) {
-        await libraryDir.create(recursive: true);
-        print("Library directory created at: ${libraryDir.path}");
-      }
-      Directory thisWeekDir = Directory('$appDataPath/this_week');
-      if (!await thisWeekDir.exists()) {
-        await thisWeekDir.create(recursive: true);
-        print("ThisWeek directory created at: ${thisWeekDir.path}");
+      var status = await Permission.storage.request();
+      if (status.isGranted) {
+        await _setupFolders();
+        await _loadSelectedLibrary();
+      } else {
+        throw Exception("Storage permission is required.");
       }
     } catch (e) {
-      debugPrint("Error creating folders: $e");
+      setState(() {
+        errorMessage = e.toString();
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 
-  print(appDataPath);
+  Future<void> _setupFolders() async {
+    List<Directory>? externalDirs = await getExternalStorageDirectories();
+    if (externalDirs != null && externalDirs.isNotEmpty) {
+      baseDataPath = externalDirs.first.parent.parent.parent.parent.path;
+      List<String> appDataFolders = [
+        'appdata_sbc',
+        'appdata_uke',
+        'appdata_xmas'
+      ];
+      for (String folder in appDataFolders) {
+        Directory appDataDir = Directory('$baseDataPath/$folder');
+        await appDataDir.create(recursive: true);
+        await Directory('${appDataDir.path}/library').create(recursive: true);
+        await Directory('${appDataDir.path}/this_week').create(recursive: true);
+      }
+    } else {
+      throw Exception("No external storage directories found.");
+    }
+  }
 
-  runApp(MyApp(appDataPath: appDataPath));
-}
-
-class MyApp extends StatelessWidget {
-  final String appDataPath;
-
-  const MyApp({super.key, required this.appDataPath});
+  Future<void> _loadSelectedLibrary() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      selectedLibrary = prefs.getString('selectedLibrary');
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,15 +91,137 @@ class MyApp extends StatelessWidget {
           bodyMedium: TextStyle(color: Colors.white),
         ),
       ),
-      home: MainScreen(appDataPath: appDataPath),
+      home: isLoading
+          ? const LoadingScreen()
+          : errorMessage != null
+              ? ErrorScreen(message: errorMessage!, onRetry: _initializeApp)
+              : selectedLibrary != null
+                  ? MainScreen(
+                      appDataPath: '$baseDataPath/$selectedLibrary',
+                      appDataName: selectedLibrary!,
+                    )
+                  : AppDataSelectionScreen(baseDataPath: baseDataPath!),
+    );
+  }
+}
+
+class LoadingScreen extends StatelessWidget {
+  const LoadingScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+}
+
+class ErrorScreen extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+
+  const ErrorScreen({Key? key, required this.message, required this.onRetry})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(message, textAlign: TextAlign.center),
+            ElevatedButton(
+              onPressed: onRetry,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AppDataSelectionScreen extends StatelessWidget {
+  final String baseDataPath;
+
+  const AppDataSelectionScreen({Key? key, required this.baseDataPath})
+      : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 142, 109, 232),
+        title: Center(
+            child: Text(
+          'Select Music Library',
+          style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
+        )),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+              onPressed: () => _selectAppData(context, 'appdata_sbc'),
+              child: SizedBox(
+                width: 130.0,
+                child: Center(
+                  child: Text('SBC Library'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => _selectAppData(context, 'appdata_uke'),
+              child: SizedBox(
+                width: 130.0,
+                child: Center(
+                  child: Text('Ukelele Library'),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => _selectAppData(context, 'appdata_xmas'),
+              child: SizedBox(
+                width: 130.0,
+                child: Center(
+                  child: Text('Chrismast Library'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _selectAppData(BuildContext context, String appDataFolder) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('selectedLibrary', appDataFolder);
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MainScreen(
+          appDataPath: '$baseDataPath/$appDataFolder',
+          appDataName: appDataFolder,
+        ),
+      ),
     );
   }
 }
 
 class MainScreen extends StatefulWidget {
   final String appDataPath;
+  final String appDataName;
 
-  const MainScreen({super.key, required this.appDataPath});
+  const MainScreen(
+      {Key? key, required this.appDataPath, required this.appDataName})
+      : super(key: key);
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -77,11 +231,12 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   Map<String, dynamic> library = {};
   bool isLoading = true;
-  Map<String, dynamic> newLibrary = {};
 
   @override
   void initState() {
     super.initState();
+    //loadLibrary();
+
     _requestPermissionAndSetup();
   }
 
@@ -146,9 +301,53 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  // Future<void> _loadLibrary() async {
+  //   try {
+  //     File jsonFile = File('${widget.appDataPath}/fileDict.json');
+  //     if (await jsonFile.exists()) {
+  //       String jsonString = await jsonFile.readAsString();
+
+  //       Directory libraryDir = Directory('${widget.appDataPath}/library');
+  //       Map<String, dynamic> newLibrary = await _createDictionaryMap(libraryDir.path);
+
+  //       setState(() {
+  //         library = json.decode(jsonString);
+  //         isLoading = false;
+  //       });
+
+  //     } else {
+  //       await _createAndSaveLibrary();
+  //       _showFlashMessage("File json dictionary created");
+  //     }
+  //   } catch (e) {
+  //     print("Error loading library: $e");
+  //     setState(() {
+  //       isLoading = false;
+  //     });
+  //   }
+  // }
+
+  // Future<void> _createAndSaveLibrary() async {
+  //   try {
+  //     Directory libraryDir = Directory('${widget.appDataPath}/library');
+  //     Map<String, dynamic> newLibrary = await _createDictionaryMap(libraryDir.path);
+  //     await _saveDictToJson(newLibrary);
+  //     setState(() {
+  //       library = newLibrary;
+  //       isLoading = false;
+  //     });
+
+  //   } catch (e) {
+  //     print("Error creating library: $e");
+  //     setState(() {
+  //       isLoading = false;
+  //     });
+  //   }
+  // }
+
   Future<Map<String, dynamic>> _createDictionaryMap(String libraryPath) async {
     Map<String, dynamic> library = {};
-    library['**'] = []; // List to store all valid text files
+    library['**'] = [];
     Directory libraryDir = Directory(libraryPath);
 
     if (await libraryDir.exists()) {
@@ -160,14 +359,12 @@ class _MainScreenState extends State<MainScreen> {
           String imagePath = '${libraryDir.path}/$fileName.jpg';
 
           if (await File(imagePath).exists()) {
-            library['**'].add(fileName); // Add the valid text file to the list
+            library['**'].add(fileName);
 
-            // Add words from the filename to the library
             for (String word in _getWords(fileName)) {
               _addWordToLibrary(word, fileName, library);
             }
 
-            // Add words from the file content to the library
             String fileContent = await File(file.path).readAsString();
             for (String word in _getWords(fileContent)) {
               _addWordToLibrary(word, fileName, library);
@@ -177,7 +374,6 @@ class _MainScreenState extends State<MainScreen> {
       }
     }
 
-    // Sort the library keys for better readability
     Map<String, dynamic> sortedLibrary = Map.fromEntries(
         library.entries.toList()..sort((e1, e2) => e1.key.compareTo(e2.key)));
 
@@ -187,14 +383,12 @@ class _MainScreenState extends State<MainScreen> {
   List<String> _getWords(String text) {
     return text
         .toLowerCase()
-        .replaceAll(RegExp(r'[^\w\s]+'), '') // Remove special characters
-        .replaceAll(
-            RegExp(r'\s+'), ' ') // Replace multiple spaces with a single space
-        .replaceAll(RegExp(r'\r\n|\r|\n'),
-            ' ') // Replace newline characters with a space
-        .split(' ') // Split into words
-        .where((word) => word.isNotEmpty) // Remove empty words
-        .toSet() // Remove duplicates
+        .replaceAll(RegExp(r'[^\w\s]+'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'\r\n|\r|\n'), ' ')
+        .split(' ')
+        .where((word) => word.isNotEmpty)
+        .toSet()
         .toList();
   }
 
@@ -210,9 +404,14 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _saveDictToJson(Map<String, dynamic> library) async {
     File jsonFile = File('${widget.appDataPath}/fileDict.json');
-    String jsonString = const JsonEncoder.withIndent('  ')
-        .convert(library); // Use indented JSON for better readability
+    String jsonString = const JsonEncoder.withIndent('  ').convert(library);
     await jsonFile.writeAsString(jsonString);
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   void _showFlashMessage(String message) {
@@ -222,13 +421,6 @@ class _MainScreenState extends State<MainScreen> {
       backgroundColor: Colors.deepPurpleAccent,
     );
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
-  }
-
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
   }
 
   @override
@@ -247,6 +439,30 @@ class _MainScreenState extends State<MainScreen> {
     ];
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.black12,
+        title: Center(
+          child:
+              Text(widget.appDataName.replaceAll('appdata_', '').toUpperCase()),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.swap_horiz),
+            onPressed: () async {
+              SharedPreferences prefs = await SharedPreferences.getInstance();
+              await prefs.remove('selectedLibrary');
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AppDataSelectionScreen(
+                      baseDataPath: widget.appDataPath
+                          .replaceAll(RegExp(r'/appdata_[^/]+$'), '')),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: pages[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -260,14 +476,9 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: const Color.fromARGB(255, 247, 142, 5),
+        selectedItemColor: Colors.amber[800],
         onTap: _onItemTapped,
-        backgroundColor: const Color.fromARGB(255, 22, 27, 155),
-        unselectedItemColor: Colors.white,
       ),
-      backgroundColor: Color.fromARGB(255, 227, 223, 228),
     );
   }
-
-  
 }
