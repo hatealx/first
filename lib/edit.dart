@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
-import 'view_song_page.dart'; // Make sure to import this
-import 'package:first/utils/load_this_week_songs.dart';
+import 'pages/view_song_page.dart'; // Make sure to import this
 
 class HomePage extends StatefulWidget {
   final String appDataPath;
@@ -17,7 +16,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> songsList = [];
-  List<Map<String, dynamic>> thisWeekSongsList = [];
   bool isLoading = true;
   late Directory libraryDir;
   late Directory thisWeekDir;
@@ -233,8 +231,6 @@ class _HomePageState extends State<HomePage> {
   void _handleLongPress(Map<String, dynamic> song) async {
     if (song['hasImage']) {
       await _copySongToThisWeek(song['name']);
-      
-
       _viewSong(song);
     } else {
       _showFlashMessage('${song['name']} has no image to copy');
@@ -269,73 +265,52 @@ class _HomePageState extends State<HomePage> {
 
     _showFlashMessage('$songName is copied to this week folder');
   }
-  void _viewSong(Map<String, dynamic> song) async {
-  try {
-    // Await the Future to get the list of songs
-    List<Map<String, dynamic>> songListWeek = await loadThisWeekSongs(widget.appDataPath);
 
-    print(" ##########################${songListWeek}");
-
-    // Find the index of the selected song
-    int initialSongIndex = songListWeek.indexWhere((s) => s['name'] == song['name']);
-
-    if (initialSongIndex != -1) {
-      // Navigate to ViewSongPage, passing the songs list and the initial index
+  void _viewSong(Map<String, dynamic> song) {
+    int songIndex = songsList.indexWhere((s) => s['name'] == song['name']);
+    if (songIndex != -1) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => ViewSongPage(
-            songs: songListWeek,
-            initialSongIndex: initialSongIndex,
+            songs: [song],
+            initialSongIndex: 0,
           ),
         ),
       );
-    } else {
-      print('Song not found in the list.');
     }
-  } catch (e) {
-    print("Error loading songs or navigating to song: $e");
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepPurple,
       appBar: AppBar(
-        
-        backgroundColor: Colors.deepPurple,
-        title:Center(
-          child: Text('Song Library', style: TextStyle(color: Colors.white)),
-        )
+        title: const Text('Song Library'),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      labelText: "Search for a song",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      filled: true,
-                      fillColor: Colors.grey[200],
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: _clearSearch,
-                      ),
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    labelText: "Search for a song",
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
-                    onTap: () async {
-                      await _loadSongsFromJson();
-                    },
-                    onChanged: (text) {
-                      _filterSongs(text);
-                    },
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: _clearSearch,
+                    ),
                   ),
+                  onTap: () async {
+                    await _loadSongsFromJson();
+                  },
+                  onChanged: (text) {
+                    _filterSongs(text);
+                  },
                 ),
                 Expanded(
                   child: songsList.isEmpty

@@ -86,7 +86,7 @@ class _ViewSongPageState extends State<ViewSongPage> {
 
   void _printDebugInfo() {
     print('Current song: ${widget.songs[_currentSongIndex]['name']}');
-    print('Number of images: ${widget.songs[_currentSongIndex]['images'].length}');
+    
     print('Image paths: ${widget.songs[_currentSongIndex]['images']}');
   }
 

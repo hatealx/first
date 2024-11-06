@@ -255,13 +255,14 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.deepPurple,
       appBar: AppBar(
+        backgroundColor: Colors.deepPurple,
         title: const Text('This Week Songs', style: TextStyle(color: Color.fromARGB(247, 243, 243, 243))),
         centerTitle: true,
-        backgroundColor: Colors.deepPurple,
         actions: [
           IconButton(
-            icon: Icon(isReorderMode ? Icons.check : Icons.edit, color: const Color.fromARGB(247, 199, 157, 157)),
+            icon: Icon(isReorderMode ? Icons.check : Icons.edit, color: Colors.white),
             onPressed: _toggleReorderMode,
           ),
         ],
@@ -310,7 +311,7 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
       constraints: const BoxConstraints(minHeight: 80),
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color.fromARGB(72, 166, 127, 232).withOpacity(0.1),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(

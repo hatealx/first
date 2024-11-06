@@ -1,3 +1,7 @@
+import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:first/pages/choose_appdata_gui.dart';
+import 'package:first/utils/errorScreen.dart';
+import 'package:first/utils/loadingScreen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -105,115 +109,8 @@ class _MyAppState extends State<MyApp> {
   }
 }
 
-class LoadingScreen extends StatelessWidget {
-  const LoadingScreen({Key? key}) : super(key: key);
 
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
-}
 
-class ErrorScreen extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
-  const ErrorScreen({Key? key, required this.message, required this.onRetry})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(message, textAlign: TextAlign.center),
-            ElevatedButton(
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class AppDataSelectionScreen extends StatelessWidget {
-  final String baseDataPath;
-
-  const AppDataSelectionScreen({Key? key, required this.baseDataPath})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: const Color.fromARGB(255, 142, 109, 232),
-        title: Center(
-            child: Text(
-          'Select Music Library',
-          style: TextStyle(color: Color.fromARGB(255, 255, 255, 255)),
-        )),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(
-              onPressed: () => _selectAppData(context, 'appdata_sbc'),
-              child: SizedBox(
-                width: 130.0,
-                child: Center(
-                  child: Text('SBC Library'),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => _selectAppData(context, 'appdata_uke'),
-              child: SizedBox(
-                width: 130.0,
-                child: Center(
-                  child: Text('Ukelele Library'),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => _selectAppData(context, 'appdata_xmas'),
-              child: SizedBox(
-                width: 130.0,
-                child: Center(
-                  child: Text('Chrismast Library'),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _selectAppData(BuildContext context, String appDataFolder) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('selectedLibrary', appDataFolder);
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MainScreen(
-          appDataPath: '$baseDataPath/$appDataFolder',
-          appDataName: appDataFolder,
-        ),
-      ),
-    );
-  }
-}
 
 class MainScreen extends StatefulWidget {
   final String appDataPath;
@@ -301,50 +198,6 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
-  // Future<void> _loadLibrary() async {
-  //   try {
-  //     File jsonFile = File('${widget.appDataPath}/fileDict.json');
-  //     if (await jsonFile.exists()) {
-  //       String jsonString = await jsonFile.readAsString();
-
-  //       Directory libraryDir = Directory('${widget.appDataPath}/library');
-  //       Map<String, dynamic> newLibrary = await _createDictionaryMap(libraryDir.path);
-
-  //       setState(() {
-  //         library = json.decode(jsonString);
-  //         isLoading = false;
-  //       });
-
-  //     } else {
-  //       await _createAndSaveLibrary();
-  //       _showFlashMessage("File json dictionary created");
-  //     }
-  //   } catch (e) {
-  //     print("Error loading library: $e");
-  //     setState(() {
-  //       isLoading = false;
-  //     });
-  //   }
-  // }
-
-  // Future<void> _createAndSaveLibrary() async {
-  //   try {
-  //     Directory libraryDir = Directory('${widget.appDataPath}/library');
-  //     Map<String, dynamic> newLibrary = await _createDictionaryMap(libraryDir.path);
-  //     await _saveDictToJson(newLibrary);
-  //     setState(() {
-  //       library = newLibrary;
-  //       isLoading = false;
-  //     });
-
-  //   } catch (e) {
-  //     print("Error creating library: $e");
-  //     setState(() {
-  //       isLoading = false;
-  //     });
-  //   }
-  // }
-
   Future<Map<String, dynamic>> _createDictionaryMap(String libraryPath) async {
     Map<String, dynamic> library = {};
     library['**'] = [];
@@ -408,11 +261,7 @@ class _MainScreenState extends State<MainScreen> {
     await jsonFile.writeAsString(jsonString);
   }
 
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+ 
 
   void _showFlashMessage(String message) {
     final snackBar = SnackBar(
@@ -440,14 +289,14 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.black12,
+        backgroundColor: Colors.white,
         title: Center(
           child:
-              Text(widget.appDataName.replaceAll('appdata_', '').toUpperCase()),
+              Text(widget.appDataName.replaceAll('appdata_', '').toUpperCase(),style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)), ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.swap_horiz),
+            icon: const Icon(Icons.swap_horiz , color: Color.fromARGB(255, 7, 43, 222),),
             onPressed: () async {
               SharedPreferences prefs = await SharedPreferences.getInstance();
               await prefs.remove('selectedLibrary');
@@ -464,21 +313,21 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       body: pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_music),
-            label: 'Library',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today),
-            label: 'This Week',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.amber[800],
-        onTap: _onItemTapped,
-      ),
+      bottomNavigationBar:CurvedNavigationBar(
+        color:Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: Colors.deepPurple,
+      items: <Widget>[
+      Icon(Icons.library_music),
+       Icon(Icons.list, size: 30),
+    ],
+    onTap: (index) {
+      setState(() {
+      _selectedIndex = index;
+    });
+       
+    },
+  ),
+
     );
   }
 }
