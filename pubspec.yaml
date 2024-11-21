@@ -98,6 +98,7 @@ flutter:
     - assets/sbc_library.jpg
     - assets/ukulele_library.jpg
     - assets/christmas_library.jpg
+    - assets/custom.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

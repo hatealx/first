@@ -29,6 +29,7 @@ class _MyAppState extends State<MyApp> {
   bool isLoading = true;
   String? errorMessage;
   String? selectedLibrary;
+  List<String> customLibraries = [];
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _MyAppState extends State<MyApp> {
       if (status.isGranted) {
         await _setupFolders();
         await _loadSelectedLibrary();
+        await _loadCustomLibraries();
       } else {
         throw Exception("Storage permission is required.");
       }
@@ -83,6 +85,13 @@ class _MyAppState extends State<MyApp> {
     });
   }
 
+  Future<void> _loadCustomLibraries() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      customLibraries = prefs.getStringList('customLibraries') ?? [];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -104,13 +113,13 @@ class _MyAppState extends State<MyApp> {
                       appDataPath: '$baseDataPath/$selectedLibrary',
                       appDataName: selectedLibrary!,
                     )
-                  : AppDataSelectionScreen(baseDataPath: baseDataPath!),
+                  : AppDataSelectionScreen(
+                      baseDataPath: baseDataPath!,
+                      customLibraries: customLibraries,
+                    ),
     );
   }
 }
-
-
-
 
 class MainScreen extends StatefulWidget {
   final String appDataPath;
@@ -132,8 +141,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    //loadLibrary();
-
     _requestPermissionAndSetup();
   }
 
@@ -177,7 +184,6 @@ class _MainScreenState extends State<MainScreen> {
           library = newLibrary;
         });
 
-        // Find the songs that have been added or removed
         List<dynamic> addedSongs = newValidSongs
             .toSet()
             .difference(existingValidSongs.toSet())
@@ -187,7 +193,6 @@ class _MainScreenState extends State<MainScreen> {
             .difference(newValidSongs.toSet())
             .toList();
 
-        // Show a flash message with the songs that have been added or removed
         if (addedSongs.isNotEmpty) {
           _showFlashMessage("Added songs: ${addedSongs.join(', ')}");
         }
@@ -261,8 +266,6 @@ class _MainScreenState extends State<MainScreen> {
     await jsonFile.writeAsString(jsonString);
   }
 
- 
-
   void _showFlashMessage(String message) {
     final snackBar = SnackBar(
       content: Text(message),
@@ -291,12 +294,17 @@ class _MainScreenState extends State<MainScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: Center(
-          child:
-              Text(widget.appDataName.replaceAll('appdata_', '').toUpperCase(),style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)), ),
+          child: Text(
+            widget.appDataName.replaceAll('appdata_', '').toUpperCase(),
+            style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.swap_horiz , color: Color.fromARGB(255, 7, 43, 222),),
+            icon: const Icon(
+              Icons.swap_horiz,
+              color: Color.fromARGB(255, 7, 43, 222),
+            ),
             onPressed: () async {
               SharedPreferences prefs = await SharedPreferences.getInstance();
               await prefs.remove('selectedLibrary');
@@ -304,8 +312,10 @@ class _MainScreenState extends State<MainScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (context) => AppDataSelectionScreen(
-                      baseDataPath: widget.appDataPath
-                          .replaceAll(RegExp(r'/appdata_[^/]+$'), '')),
+                    baseDataPath: widget.appDataPath
+                        .replaceAll(RegExp(r'/appdata_[^/]+$'), ''),
+                    customLibraries: prefs.getStringList('customLibraries') ?? [],
+                  ),
                 ),
               );
             },
@@ -313,21 +323,19 @@ class _MainScreenState extends State<MainScreen> {
         ],
       ),
       body: pages[_selectedIndex],
-      bottomNavigationBar:CurvedNavigationBar(
-        color:Theme.of(context).scaffoldBackgroundColor,
-      backgroundColor: Colors.deepPurple,
-      items: <Widget>[
-      Icon(Icons.library_music),
-       Icon(Icons.list, size: 30),
-    ],
-    onTap: (index) {
-      setState(() {
-      _selectedIndex = index;
-    });
-       
-    },
-  ),
-
+      bottomNavigationBar: CurvedNavigationBar(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: Colors.deepPurple,
+        items: <Widget>[
+          Icon(Icons.library_music),
+          Icon(Icons.list, size: 30),
+        ],
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+      ),
     );
   }
 }
