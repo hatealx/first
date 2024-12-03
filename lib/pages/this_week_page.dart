@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:first/pages/zoom_mode_page.dart';
 import 'package:flutter/material.dart';
-import 'view_song_page.dart';
 
 class ThisWeekPage extends StatefulWidget {
   final String appDataPath;
@@ -241,15 +241,15 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
   }
 
   void _viewSongImages(int index) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ViewSongPage(
-          songs: songsList,
-          initialSongIndex: index,
-        ),
-      ),
-    );
+   Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => FullScreenImageView(
+      songs: songsList, // Replace with your songs data
+      initialSongIndex: index, // Replace with the selected song index
+    ),
+  ),
+);
   }
 
   @override

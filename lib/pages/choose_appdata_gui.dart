@@ -9,10 +9,10 @@ class AppDataSelectionScreen extends StatefulWidget {
   final List<String> customLibraries;
 
   const AppDataSelectionScreen({
-    Key? key,
+    super.key,
     required this.baseDataPath,
     required this.customLibraries,
-  }) : super(key: key);
+  });
 
   @override
   _AppDataSelectionScreenState createState() => _AppDataSelectionScreenState();
@@ -123,7 +123,7 @@ class _AppDataSelectionScreenState extends State<AppDataSelectionScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         color: accentColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.vertical(bottom: Radius.circular(16)),
+                        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
                       ),
                       child: Center(
                         child: Text(
@@ -159,7 +159,7 @@ class _AppDataSelectionScreenState extends State<AppDataSelectionScreen> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: InkWell(
               onTap: () => _createNewLibrary(context),
-              child: Column(
+              child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.add_circle_outline, size: 64, color: Colors.purple),
@@ -185,6 +185,8 @@ class _AppDataSelectionScreenState extends State<AppDataSelectionScreen> {
   void _selectAppData(BuildContext context, String appDataFolder) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('selectedLibrary', appDataFolder);
+    print('Selected library: $appDataFolder');
+    print('Selected library path: ${widget.baseDataPath}/$appDataFolder ');
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -202,22 +204,22 @@ class _AppDataSelectionScreenState extends State<AppDataSelectionScreen> {
       builder: (BuildContext context) {
         String libraryName = '';
         return AlertDialog(
-          title: Text('Create New Library'),
+          title: const Text('Create New Library'),
           content: TextField(
             onChanged: (value) {
               libraryName = value;
             },
-            decoration: InputDecoration(hintText: "Enter library name"),
+            decoration: const InputDecoration(hintText: "Enter library name"),
           ),
           actions: <Widget>[
             TextButton(
-              child: Text('Cancel'),
+              child: const Text('Cancel'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: Text('Create'),
+              child: const Text('Create'),
               onPressed: () {
                 Navigator.of(context).pop(libraryName);
               },

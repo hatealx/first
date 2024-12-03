@@ -1,5 +1,7 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:first/pages/choose_appdata_gui.dart';
+import 'package:first/permissions.dart';
 import 'package:first/utils/errorScreen.dart';
 import 'package:first/utils/loadingScreen.dart';
 import 'package:flutter/foundation.dart';
@@ -18,7 +20,7 @@ void main() {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   _MyAppState createState() => _MyAppState();
@@ -39,8 +41,8 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _initializeApp() async {
     try {
-      var status = await Permission.storage.request();
-      if (status.isGranted) {
+      var status = await storagePermission();
+      if (status) {
         await _setupFolders();
         await _loadSelectedLibrary();
         await _loadCustomLibraries();
@@ -70,11 +72,14 @@ class _MyAppState extends State<MyApp> {
       for (String folder in appDataFolders) {
         Directory appDataDir = Directory('$baseDataPath/$folder');
         await appDataDir.create(recursive: true);
+        print("successfully created ${appDataDir.path}");
         await Directory('${appDataDir.path}/library').create(recursive: true);
         await Directory('${appDataDir.path}/this_week').create(recursive: true);
       }
     } else {
-      throw Exception("No external storage directories found.");
+      print("No external storage directories found.");
+      ErrorScreen(
+          message: "Storage permission is required.", onRetry: _initializeApp);
     }
   }
 
@@ -126,8 +131,7 @@ class MainScreen extends StatefulWidget {
   final String appDataName;
 
   const MainScreen(
-      {Key? key, required this.appDataPath, required this.appDataName})
-      : super(key: key);
+      {super.key, required this.appDataPath, required this.appDataName});
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -145,18 +149,39 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _requestPermissionAndSetup() async {
-    var status = await Permission.storage.status;
-    if (!status.isGranted) {
-      status = await Permission.storage.request();
-    }
+    final deviceInfo = await DeviceInfoPlugin().androidInfo;
 
-    if (status.isGranted) {
-      Directory libraryDir = Directory('${widget.appDataPath}/library');
-      await _checkAndUpdateDictionary(libraryDir.path);
+    if (deviceInfo.version.sdkInt > 32) {
+      var status = await Permission.manageExternalStorage.status;
+      if (!status.isGranted) {
+        status = await Permission.manageExternalStorage.request();
+      }
 
-      setState(() {
-        isLoading = false;
-      });
+      if (status.isGranted) {
+        Directory libraryDir = Directory('${widget.appDataPath}/library');
+        await _checkAndUpdateDictionary(libraryDir.path);
+
+        setState(() {
+          isLoading = false;
+        });
+      }
+
+    } else {
+
+      print('Requesting storage permission FOR ANDROID SDK <= 32');
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        status = await Permission.storage.request();
+      }
+
+      if (status.isGranted) {
+        Directory libraryDir = Directory('${widget.appDataPath}/library');
+        await _checkAndUpdateDictionary(libraryDir.path);
+
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -296,7 +321,7 @@ class _MainScreenState extends State<MainScreen> {
         title: Center(
           child: Text(
             widget.appDataName.replaceAll('appdata_', '').toUpperCase(),
-            style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+            style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
           ),
         ),
         actions: [
@@ -314,7 +339,8 @@ class _MainScreenState extends State<MainScreen> {
                   builder: (context) => AppDataSelectionScreen(
                     baseDataPath: widget.appDataPath
                         .replaceAll(RegExp(r'/appdata_[^/]+$'), ''),
-                    customLibraries: prefs.getStringList('customLibraries') ?? [],
+                    customLibraries:
+                        prefs.getStringList('customLibraries') ?? [],
                   ),
                 ),
               );
@@ -326,7 +352,7 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: CurvedNavigationBar(
         color: Theme.of(context).scaffoldBackgroundColor,
         backgroundColor: Colors.deepPurple,
-        items: <Widget>[
+        items: const <Widget>[
           Icon(Icons.library_music),
           Icon(Icons.list, size: 30),
         ],

@@ -1,8 +1,9 @@
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:first/pages/zoom_mode_page.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
-import 'view_song_page.dart'; // Make sure to import this
 import 'package:first/utils/load_this_week_songs.dart';
 
 class HomePage extends StatefulWidget {
@@ -36,12 +37,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _requestPermissionAndSetup() async {
-    var status = await Permission.storage.status;
-    if (!status.isGranted) {
-      status = await Permission.storage.request();
-    }
+     final deviceInfo = await DeviceInfoPlugin().androidInfo;
 
-    if (status.isGranted) {
+    if (deviceInfo.version.sdkInt > 32) {
+      var status = await Permission.manageExternalStorage.status;
+      if (!status.isGranted) {
+        status = await Permission.manageExternalStorage.request();
+      }
+
+      if (status.isGranted) {
       libraryDir = Directory('${widget.appDataPath}/library');
       thisWeekDir = Directory('${widget.appDataPath}/this_week');
 
@@ -60,6 +64,37 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         isLoading = false;
       });
+    }
+
+    } else {
+
+      print('Requesting storage permission FOR ANDROID SDK <= 32');
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        status = await Permission.storage.request();
+      }
+
+      if (status.isGranted) {
+      libraryDir = Directory('${widget.appDataPath}/library');
+      thisWeekDir = Directory('${widget.appDataPath}/this_week');
+
+      if (!await libraryDir.exists()) {
+        await libraryDir.create();
+      }
+
+      if (!await thisWeekDir.exists()) {
+        await thisWeekDir.create();
+      }
+
+      if (await libraryDir.exists()) {
+        songsList = await _getSongsList(libraryDir.path, thisWeekDir.path);
+      }
+
+      setState(() {
+        isLoading = false;
+      });
+    }
+
     }
   }
 
@@ -274,22 +309,23 @@ class _HomePageState extends State<HomePage> {
     // Await the Future to get the list of songs
     List<Map<String, dynamic>> songListWeek = await loadThisWeekSongs(widget.appDataPath);
 
-    print(" ##########################${songListWeek}");
+    print(" ##########################$songListWeek");
 
     // Find the index of the selected song
     int initialSongIndex = songListWeek.indexWhere((s) => s['name'] == song['name']);
 
     if (initialSongIndex != -1) {
       // Navigate to ViewSongPage, passing the songs list and the initial index
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ViewSongPage(
-            songs: songListWeek,
-            initialSongIndex: initialSongIndex,
-          ),
-        ),
-      );
+
+ Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (context) => FullScreenImageView(
+      songs: songListWeek, // Replace with your songs data
+      initialSongIndex: initialSongIndex, // Replace with the selected song index
+    ),
+  ),
+);
     } else {
       print('Song not found in the list.');
     }
@@ -305,7 +341,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         
         backgroundColor: Colors.deepPurple,
-        title:Center(
+        title:const Center(
           child: Text('Song Library', style: TextStyle(color: Colors.white)),
         )
       ),

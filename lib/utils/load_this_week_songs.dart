@@ -6,7 +6,7 @@ import 'dart:io';
 Future<List<Map<String, dynamic>>> loadThisWeekSongs(String appdatapath) async {
     try {
   
-      Directory thisWeekDir = Directory('${appdatapath}/this_week');
+      Directory thisWeekDir = Directory('$appdatapath/this_week');
           print('This week directory: ${thisWeekDir.path}');
       if (!await thisWeekDir.exists()) {
         print("This week directory does not exist");
@@ -20,7 +20,7 @@ Future<List<Map<String, dynamic>>> loadThisWeekSongs(String appdatapath) async {
         if (entity is File && entity.path.endsWith('.jpg')) {
           String fileName = entity.path.split('/').last;
           String songName = fileName.split('.').first;
-          File validFile = File('${appdatapath}/library/$songName.txt');
+          File validFile = File('$appdatapath/library/$songName.txt');
           if (await validFile.exists()) {
             songImages.putIfAbsent(songName, () => []).add(entity.path);
           }

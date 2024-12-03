@@ -2,7 +2,6 @@
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> _setupFolders() async {
     List<Directory>? externalDirs = await getExternalStorageDirectories();
