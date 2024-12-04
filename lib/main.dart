@@ -115,17 +115,17 @@ class _MyAppState extends State<MyApp> {
           : errorMessage != null
               ? ErrorScreen(message: errorMessage!, onRetry: _initializeApp)
               : selectedLibrary != null
-                  ?  Scaffold(
-                    body: DoubleBackToCloseApp(
-                      snackBar: const SnackBar(
-                        content: Text('Tap back again to exit the app'),
+                  ? Scaffold(
+                      body: DoubleBackToCloseApp(
+                        snackBar: const SnackBar(
+                          content: Text('Tap back again to exit the app'),
+                        ),
+                        child: MainScreen(
+                          appDataPath: '$baseDataPath/$selectedLibrary',
+                          appDataName: selectedLibrary!,
+                        ),
                       ),
-                      child: MainScreen(
-                        appDataPath: '$baseDataPath/$selectedLibrary',
-                        appDataName: selectedLibrary!,
-                      ),
-                    ),
-                  )
+                    )
                   : AppDataSelectionScreen(
                       baseDataPath: baseDataPath!,
                       customLibraries: customLibraries,
@@ -173,9 +173,7 @@ class _MainScreenState extends State<MainScreen> {
           isLoading = false;
         });
       }
-
     } else {
-
       print('Requesting storage permission FOR ANDROID SDK <= 32');
       var status = await Permission.storage.status;
       if (!status.isGranted) {
@@ -231,10 +229,29 @@ class _MainScreenState extends State<MainScreen> {
         }
         if (removedSongs.isNotEmpty) {
           _showFlashMessage("Removed songs: ${removedSongs.join(', ')}");
+
+          // Directory path for "this_week" images
+          String thisWeekImagePath = '${widget.appDataPath}/this_week';
+
+          for (String song in removedSongs) {
+            // Construct the full image path
+            String imagePath = '$thisWeekImagePath/${song}.jpg';
+
+            // Check if the file exists before attempting to delete
+            if (await File(imagePath).exists()) {
+              try {
+                await File(imagePath).delete();
+                _showFlashMessage("Deleted image for song: $song");
+              } catch (e) {
+                _showFlashMessage("Error deleting image for song $song: $e");
+              }
+            } else {
+              _showFlashMessage("Image for song $song not found.");
+            }
+          }
         }
-      }
-      else{
-         _showFlashMessage("there is no  update to do on the json dictionary");
+      } else {
+        _showFlashMessage("there is no update to do on the json dictionary");
       }
     }
   }
@@ -302,7 +319,6 @@ class _MainScreenState extends State<MainScreen> {
     await jsonFile.writeAsString(jsonString);
   }
 
-
   void _showFlashMessage(String message) {
     final snackBar = SnackBar(
       content: Text(message),
@@ -323,8 +339,15 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     List<Widget> pages = [
-      HomePage(appDataPath: widget.appDataPath, library: library),
-      ThisWeekPage(appDataPath: widget.appDataPath),
+      HomePage(
+        key: UniqueKey(),
+        appDataPath: widget.appDataPath,
+        library: library,
+      ),
+      ThisWeekPage(
+        key: UniqueKey(),
+        appDataPath: widget.appDataPath,
+      ),
     ];
 
     return Scaffold(
@@ -338,19 +361,19 @@ class _MainScreenState extends State<MainScreen> {
         ),
         actions: [
           IconButton(
-          onPressed: () async {
-             Directory libraryDir = Directory('${widget.appDataPath}/library');
-             await _checkAndUpdateDictionary(libraryDir.path);
+            onPressed: () async {
+              Directory libraryDir = Directory('${widget.appDataPath}/library');
+              await _checkAndUpdateDictionary(libraryDir.path);
               // Trigger a rebuild of the selected page
-                setState(() {
-                  // You can reassign library or any other state variables if needed
-                  library = Map<String, dynamic>.from(library);
-                });
-          },
-          icon:  const Icon(
-             Icons.download_for_offline,
+              setState(() {
+                library = Map<String, dynamic>.from(library);
+              });
+            },
+            icon: const Icon(
+              Icons.download_for_offline,
               color: Color.fromARGB(255, 7, 43, 222),
-          ),),
+            ),
+          ),
           IconButton(
             icon: const Icon(
               Icons.swap_horiz,
