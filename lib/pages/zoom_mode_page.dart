@@ -34,16 +34,16 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
     _currentSongIndex = widget.initialSongIndex;
     _currentImageIndex = 0;
     _pageController = PageController(initialPage: _currentImageIndex);
-    
+
     // Start the timer to hide UI elements
     _startHideIndexTimer();
-    
+
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
   }
 
   void _startHideIndexTimer() {
     _timer?.cancel();
-    _timer = Timer(const Duration(milliseconds: 1500), () {
+    _timer = Timer(const Duration(milliseconds: 6000), () {
       if (mounted) {
         setState(() {
           _showIndex = false;
@@ -54,8 +54,9 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
   }
 
   Future<void> _editImage() async {
-    String currentImagePath = widget.songs[_currentSongIndex]['images'][_currentImageIndex];
-    
+    String currentImagePath =
+        widget.songs[_currentSongIndex]['images'][_currentImageIndex];
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -77,13 +78,19 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
       _showBars = !_showBars;
       _showIndex = _showBars;
     });
+
     if (_showBars) {
       _startHideIndexTimer();
     }
-    SystemChrome.setEnabledSystemUIMode(
-      _showBars ? SystemUiMode.manual : SystemUiMode.immersive,
-      overlays: _showBars ? SystemUiOverlay.values : [],
-    );
+
+    try {
+      SystemChrome.setEnabledSystemUIMode(
+        _showBars ? SystemUiMode.manual : SystemUiMode.immersive,
+        overlays: _showBars ? SystemUiOverlay.values : [],
+      );
+    } catch (e) {
+      print('Error setting System UI Mode: $e');
+    }
   }
 
   void _goToNextSong() {
@@ -130,12 +137,16 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
                 ),
               ),
               backgroundColor: Colors.deepPurple.withOpacity(0.7),
+              centerTitle: true,
               actions: [
                 IconButton(
                   icon: const Icon(Icons.edit, color: Colors.white),
                   onPressed: _editImage,
                 ),
               ],
+              iconTheme: const IconThemeData(
+                color: Colors.white, // Set the color of the back arrow
+              ),
             )
           : null,
       body: GestureDetector(
@@ -167,14 +178,18 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
                 right: 0,
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 8.0, horizontal: 16.0),
                     decoration: BoxDecoration(
                       color: Colors.deepPurple.withOpacity(0.7),
                       borderRadius: BorderRadius.circular(20.0),
                     ),
                     child: Text(
                       'Image ${_currentImageIndex + 1} / ${images.length}',
-                      style: const TextStyle(color: Colors.white, fontSize: 16.0, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.0,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),

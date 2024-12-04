@@ -1,5 +1,6 @@
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:double_back_to_close_app/double_back_to_close_app.dart';
 import 'package:first/pages/choose_appdata_gui.dart';
 import 'package:first/permissions.dart';
 import 'package:first/utils/errorScreen.dart';
@@ -114,10 +115,17 @@ class _MyAppState extends State<MyApp> {
           : errorMessage != null
               ? ErrorScreen(message: errorMessage!, onRetry: _initializeApp)
               : selectedLibrary != null
-                  ? MainScreen(
-                      appDataPath: '$baseDataPath/$selectedLibrary',
-                      appDataName: selectedLibrary!,
-                    )
+                  ?  Scaffold(
+                    body: DoubleBackToCloseApp(
+                      snackBar: const SnackBar(
+                        content: Text('Tap back again to exit the app'),
+                      ),
+                      child: MainScreen(
+                        appDataPath: '$baseDataPath/$selectedLibrary',
+                        appDataName: selectedLibrary!,
+                      ),
+                    ),
+                  )
                   : AppDataSelectionScreen(
                       baseDataPath: baseDataPath!,
                       customLibraries: customLibraries,
@@ -225,6 +233,9 @@ class _MainScreenState extends State<MainScreen> {
           _showFlashMessage("Removed songs: ${removedSongs.join(', ')}");
         }
       }
+      else{
+         _showFlashMessage("there is no  update to do on the json dictionary");
+      }
     }
   }
 
@@ -291,6 +302,7 @@ class _MainScreenState extends State<MainScreen> {
     await jsonFile.writeAsString(jsonString);
   }
 
+
   void _showFlashMessage(String message) {
     final snackBar = SnackBar(
       content: Text(message),
@@ -325,6 +337,20 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ),
         actions: [
+          IconButton(
+          onPressed: () async {
+             Directory libraryDir = Directory('${widget.appDataPath}/library');
+             await _checkAndUpdateDictionary(libraryDir.path);
+              // Trigger a rebuild of the selected page
+                setState(() {
+                  // You can reassign library or any other state variables if needed
+                  library = Map<String, dynamic>.from(library);
+                });
+          },
+          icon:  const Icon(
+             Icons.download_for_offline,
+              color: Color.fromARGB(255, 7, 43, 222),
+          ),),
           IconButton(
             icon: const Icon(
               Icons.swap_horiz,

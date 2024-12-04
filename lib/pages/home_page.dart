@@ -268,6 +268,11 @@ class _HomePageState extends State<HomePage> {
   void _handleLongPress(Map<String, dynamic> song) async {
     if (song['hasImage']) {
       await _copySongToThisWeek(song['name']);
+
+      setState(() {
+      _searchController.clear(); 
+        _filterSongs('');// Clear the TextField
+      });
       
 
       _viewSong(song);
