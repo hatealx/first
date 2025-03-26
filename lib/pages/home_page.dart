@@ -30,14 +30,14 @@ class _HomePageState extends State<HomePage> {
     _requestPermissionAndSetup();
   }
 
-    @override
+  @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _requestPermissionAndSetup() async {
-     final deviceInfo = await DeviceInfoPlugin().androidInfo;
+    final deviceInfo = await DeviceInfoPlugin().androidInfo;
 
     if (deviceInfo.version.sdkInt > 32) {
       var status = await Permission.manageExternalStorage.status;
@@ -46,28 +46,26 @@ class _HomePageState extends State<HomePage> {
       }
 
       if (status.isGranted) {
-      libraryDir = Directory('${widget.appDataPath}/library');
-      thisWeekDir = Directory('${widget.appDataPath}/this_week');
+        libraryDir = Directory('${widget.appDataPath}/library');
+        thisWeekDir = Directory('${widget.appDataPath}/this_week');
 
-      if (!await libraryDir.exists()) {
-        await libraryDir.create();
+        if (!await libraryDir.exists()) {
+          await libraryDir.create();
+        }
+
+        if (!await thisWeekDir.exists()) {
+          await thisWeekDir.create();
+        }
+
+        if (await libraryDir.exists()) {
+          songsList = await _getSongsList(libraryDir.path, thisWeekDir.path);
+        }
+
+        setState(() {
+          isLoading = false;
+        });
       }
-
-      if (!await thisWeekDir.exists()) {
-        await thisWeekDir.create();
-      }
-
-      if (await libraryDir.exists()) {
-        songsList = await _getSongsList(libraryDir.path, thisWeekDir.path);
-      }
-
-      setState(() {
-        isLoading = false;
-      });
-    }
-
     } else {
-
       print('Requesting storage permission FOR ANDROID SDK <= 32');
       var status = await Permission.storage.status;
       if (!status.isGranted) {
@@ -75,26 +73,25 @@ class _HomePageState extends State<HomePage> {
       }
 
       if (status.isGranted) {
-      libraryDir = Directory('${widget.appDataPath}/library');
-      thisWeekDir = Directory('${widget.appDataPath}/this_week');
+        libraryDir = Directory('${widget.appDataPath}/library');
+        thisWeekDir = Directory('${widget.appDataPath}/this_week');
 
-      if (!await libraryDir.exists()) {
-        await libraryDir.create();
+        if (!await libraryDir.exists()) {
+          await libraryDir.create();
+        }
+
+        if (!await thisWeekDir.exists()) {
+          await thisWeekDir.create();
+        }
+
+        if (await libraryDir.exists()) {
+          songsList = await _getSongsList(libraryDir.path, thisWeekDir.path);
+        }
+
+        setState(() {
+          isLoading = false;
+        });
       }
-
-      if (!await thisWeekDir.exists()) {
-        await thisWeekDir.create();
-      }
-
-      if (await libraryDir.exists()) {
-        songsList = await _getSongsList(libraryDir.path, thisWeekDir.path);
-      }
-
-      setState(() {
-        isLoading = false;
-      });
-    }
-
     }
   }
 
@@ -110,9 +107,12 @@ class _HomePageState extends State<HomePage> {
       for (FileSystemEntity file in files) {
         if (file is File && file.path.endsWith('.txt')) {
           String songName = file.path.split('/').last.split('.').first;
-          bool isChecked = await File('${thisWeekDir.path}/$songName.jpg').exists();
-          bool hasImage = await File('${libraryDir.path}/$songName.jpg').exists();
-          songs.add({'name': songName, 'checked': isChecked, 'hasImage': hasImage});
+          bool isChecked =
+              await File('${thisWeekDir.path}/$songName.jpg').exists();
+          bool hasImage =
+              await File('${libraryDir.path}/$songName.jpg').exists();
+          songs.add(
+              {'name': songName, 'checked': isChecked, 'hasImage': hasImage});
         }
       }
 
@@ -142,7 +142,8 @@ class _HomePageState extends State<HomePage> {
       Set<String>? commonSongs;
       for (var word in queryWords) {
         if (widget.library.containsKey(word)) {
-          Set<String> wordSongs = Set.from(List<String>.from(widget.library[word]!));
+          Set<String> wordSongs =
+              Set.from(List<String>.from(widget.library[word]!));
           if (commonSongs == null) {
             commonSongs = wordSongs;
           } else {
@@ -157,9 +158,15 @@ class _HomePageState extends State<HomePage> {
 
       int songNumber = 1;
       for (var songName in songNamesSet) {
-        bool isChecked = await File('${thisWeekDir.path}/$songName.jpg').exists();
+        bool isChecked =
+            await File('${thisWeekDir.path}/$songName.jpg').exists();
         bool hasImage = await File('${libraryDir.path}/$songName.jpg').exists();
-        filteredSongs.add({'name': songName, 'number': songNumber, 'checked': isChecked, 'hasImage': hasImage});
+        filteredSongs.add({
+          'name': songName,
+          'number': songNumber,
+          'checked': isChecked,
+          'hasImage': hasImage
+        });
         songNumber++;
       }
 
@@ -185,7 +192,9 @@ class _HomePageState extends State<HomePage> {
     List<String> matchingFiles = [];
 
     for (var file in libraryFiles) {
-      if (file is File && file.path.endsWith('.jpg') && file.path.contains(RegExp('^${libraryDir.path}/$songName.*.jpg\$'))) {
+      if (file is File &&
+          file.path.endsWith('.jpg') &&
+          file.path.contains(RegExp('^${libraryDir.path}/$songName.*.jpg\$'))) {
         matchingFiles.add(file.path);
       }
     }
@@ -230,7 +239,8 @@ class _HomePageState extends State<HomePage> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Dictionary Not Found'),
-          content: const Text('No dictionary for search found. Please add the fileDict.json file to the appdata folder.'),
+          content: const Text(
+              'No dictionary for search found. Please add the fileDict.json file to the appdata folder.'),
           actions: <Widget>[
             TextButton(
               child: const Text('OK'),
@@ -270,10 +280,9 @@ class _HomePageState extends State<HomePage> {
       await _copySongToThisWeek(song['name']);
 
       setState(() {
-      _searchController.clear(); 
-        _filterSongs('');// Clear the TextField
+        _searchController.clear();
+        _filterSongs(''); // Clear the TextField
       });
-      
 
       _viewSong(song);
     } else {
@@ -286,7 +295,9 @@ class _HomePageState extends State<HomePage> {
     List<String> matchingFiles = [];
 
     for (var file in libraryFiles) {
-      if (file is File && file.path.endsWith('.jpg') && file.path.contains(RegExp('^${libraryDir.path}/$songName.*.jpg\$'))) {
+      if (file is File &&
+          file.path.endsWith('.jpg') &&
+          file.path.contains(RegExp('^${libraryDir.path}/$songName.*.jpg\$'))) {
         matchingFiles.add(file.path);
       }
     }
@@ -309,64 +320,82 @@ class _HomePageState extends State<HomePage> {
 
     _showFlashMessage('$songName is copied to this week folder');
   }
+
   void _viewSong(Map<String, dynamic> song) async {
-  try {
-    // Await the Future to get the list of songs
-    List<Map<String, dynamic>> songListWeek = await loadThisWeekSongs(widget.appDataPath);
+    try {
+      // Await the Future to get the list of songs
+      List<Map<String, dynamic>> songListWeek =
+          await loadThisWeekSongs(widget.appDataPath);
 
-    print(" ##########################$songListWeek");
+      print(" ##########################$songListWeek");
 
-    // Find the index of the selected song
-    int initialSongIndex = songListWeek.indexWhere((s) => s['name'] == song['name']);
+      // Find the index of the selected song
+      int initialSongIndex =
+          songListWeek.indexWhere((s) => s['name'] == song['name']);
 
-    if (initialSongIndex != -1) {
-      // Navigate to ViewSongPage, passing the songs list and the initial index
+      if (initialSongIndex != -1) {
+        // Navigate to ViewSongPage, passing the songs list and the initial index
 
- Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => FullScreenImageView(
-      songs: songListWeek, // Replace with your songs data
-      initialSongIndex: initialSongIndex, // Replace with the selected song index
-    ),
-  ),
-);
-    } else {
-      print('Song not found in the list.');
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FullScreenImageView(
+              songs: songListWeek, // Replace with your songs data
+              initialSongIndex:
+                  initialSongIndex, // Replace with the selected song index
+            ),
+          ),
+        );
+      } else {
+        print('Song not found in the list.');
+      }
+    } catch (e) {
+      print("Error loading songs or navigating to song: $e");
     }
-  } catch (e) {
-    print("Error loading songs or navigating to song: $e");
   }
-}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepPurple,
+      backgroundColor: Colors.deepPurple[100],
       appBar: AppBar(
-        
-        backgroundColor: Colors.deepPurple,
-        title:const Center(
-          child: Text('Song Library', style: TextStyle(color: Colors.white)),
-        )
-      ),
+          elevation: 0,
+          backgroundColor: Colors.deepPurple[400],
+          title: const Center(
+            child: Text('Song Library',
+                style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.bold)),
+          )),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                Padding(
+                Container(
                   padding: const EdgeInsets.all(8.0),
+                  color: Colors.deepPurple[400],
                   child: TextField(
                     controller: _searchController,
+                    style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: "Search for a song",
+                      labelStyle: const TextStyle(color: Colors.white70),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8.0),
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: const BorderSide(color: Colors.white),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: const BorderSide(color: Colors.white70),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide:
+                            const BorderSide(color: Colors.white, width: 2),
                       ),
                       filled: true,
-                      fillColor: Colors.grey[200],
+                      fillColor: Colors.deepPurple[300],
                       suffixIcon: IconButton(
-                        icon: const Icon(Icons.clear),
+                        icon: const Icon(Icons.clear, color: Colors.white70),
                         onPressed: _clearSearch,
                       ),
                     ),
@@ -380,48 +409,62 @@ class _HomePageState extends State<HomePage> {
                 ),
                 Expanded(
                   child: songsList.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Text(
                             'No songs found in the library folder.',
-                            style: TextStyle(color: Color.fromARGB(249, 0, 0, 0)),
+                            style: TextStyle(
+                                color: Colors.deepPurple[800],
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500),
                           ),
                         )
                       : ListView.builder(
                           itemCount: songsList.length,
                           itemBuilder: (context, index) {
                             return Card(
-                              margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              elevation: 2,
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                               child: ListTile(
                                 leading: CircleAvatar(
-                                  backgroundColor: Colors.deepPurple,
+                                  backgroundColor: Colors.deepPurple[400],
                                   child: Text(
                                     '${songsList[index]['number']}',
-                                    style: const TextStyle(color: Colors.white),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ),
                                 title: Text(
                                   songsList[index]['name'],
                                   style: TextStyle(
-                                    color: songsList[index]['hasImage']
-                                        ? Colors.black
-                                        : Colors.red,
-                                    fontWeight: FontWeight.bold
-                                  ),
+                                      color: songsList[index]['hasImage']
+                                          ? Colors.deepPurple[800]
+                                          : Colors.red[700],
+                                      fontWeight: FontWeight.bold),
                                 ),
                                 trailing: Checkbox(
+                                  activeColor: Colors.deepPurple[400],
                                   value: songsList[index]['checked'],
                                   onChanged: songsList[index]['hasImage']
                                       ? (bool? value) {
                                           if (value != null) {
                                             setState(() {
-                                              songsList[index]['checked'] = value;
-                                              _handleCheckboxChange(songsList[index]['name'], value);
+                                              songsList[index]['checked'] =
+                                                  value;
+                                              _handleCheckboxChange(
+                                                  songsList[index]['name'],
+                                                  value);
                                             });
                                           }
                                         }
                                       : null,
                                 ),
-                                onLongPress: () => _handleLongPress(songsList[index]),
+                                onLongPress: () =>
+                                    _handleLongPress(songsList[index]),
                               ),
                             );
                           },

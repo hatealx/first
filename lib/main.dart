@@ -235,7 +235,7 @@ class _MainScreenState extends State<MainScreen> {
 
           for (String song in removedSongs) {
             // Construct the full image path
-            String imagePath = '$thisWeekImagePath/${song}.jpg';
+            String imagePath = '$thisWeekImagePath/$song.jpg';
 
             // Check if the file exists before attempting to delete
             if (await File(imagePath).exists()) {
@@ -352,32 +352,30 @@ class _MainScreenState extends State<MainScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        title: Center(
-          child: Text(
-            widget.appDataName.replaceAll('appdata_', '').toUpperCase(),
-            style: const TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
-          ),
+        backgroundColor: Colors.deepPurple[400],
+        title: Text(
+          widget.appDataName.replaceAll('appdata_', '').toUpperCase(),
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
             onPressed: () async {
               Directory libraryDir = Directory('${widget.appDataPath}/library');
               await _checkAndUpdateDictionary(libraryDir.path);
-              // Trigger a rebuild of the selected page
               setState(() {
                 library = Map<String, dynamic>.from(library);
               });
             },
             icon: const Icon(
               Icons.download_for_offline,
-              color: Color.fromARGB(255, 7, 43, 222),
+              color: Colors.white,
             ),
           ),
           IconButton(
             icon: const Icon(
               Icons.swap_horiz,
-              color: Color.fromARGB(255, 7, 43, 222),
+              color: Colors.white,
             ),
             onPressed: () async {
               SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -399,11 +397,11 @@ class _MainScreenState extends State<MainScreen> {
       ),
       body: pages[_selectedIndex],
       bottomNavigationBar: CurvedNavigationBar(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        backgroundColor: Colors.deepPurple,
+        color: Colors.deepPurple[400]!,
+        backgroundColor: Colors.deepPurple[100]!,
         items: const <Widget>[
-          Icon(Icons.library_music),
-          Icon(Icons.list, size: 30),
+          Icon(Icons.library_music, color: Colors.white),
+          Icon(Icons.list, size: 30, color: Colors.white),
         ],
         onTap: (index) {
           setState(() {

@@ -23,12 +23,10 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
     _songsFuture = _loadThisWeekSongs();
   }
 
-
   Future<void> _loadThisWeekSongs() async {
     try {
-  
       Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
-          print('This week directory: ${thisWeekDir.path}');
+      print('This week directory: ${thisWeekDir.path}');
       if (!await thisWeekDir.exists()) {
         print("This week directory does not exist");
         return;
@@ -63,7 +61,8 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
 
         // Sort the images list for the song
         songImages[songName]!.sort((a, b) {
-          return _extractNumberFromFilename(a).compareTo(_extractNumberFromFilename(b));
+          return _extractNumberFromFilename(a)
+              .compareTo(_extractNumberFromFilename(b));
         });
       }
 
@@ -86,8 +85,10 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
         List<dynamic> savedOrder = jsonDecode(orderContent);
 
         songs.sort((a, b) {
-          int indexA = savedOrder.indexWhere((song) => song['name'] == a['name']);
-          int indexB = savedOrder.indexWhere((song) => song['name'] == b['name']);
+          int indexA =
+              savedOrder.indexWhere((song) => song['name'] == a['name']);
+          int indexB =
+              savedOrder.indexWhere((song) => song['name'] == b['name']);
           return indexA.compareTo(indexB);
         });
       }
@@ -101,7 +102,6 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
       setState(() {
         songsList = songs;
       });
-
     } catch (e) {
       print("Error loading songs: $e");
       rethrow;
@@ -126,7 +126,9 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
 
       if (!isChecked) {
         for (var file in thisWeekFiles) {
-          if (file is File && file.path.endsWith('.jpg') && file.path.contains(songName)) {
+          if (file is File &&
+              file.path.endsWith('.jpg') &&
+              file.path.contains(songName)) {
             await file.delete();
             deletedFiles.add(file.path);
           }
@@ -140,14 +142,13 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
         await _loadThisWeekSongs();
         imageCache.clear();
         imageCache.clearLiveImages();
-        
       }
     } catch (e) {
       print("Error handling checkbox change: $e");
       _showFlashMessage('Error occurred while processing');
     }
   }
-  
+
   void _showFlashMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message),
@@ -182,7 +183,8 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
       Directory thisWeekDir = Directory('${widget.appDataPath}/this_week');
       File orderFile = File('${thisWeekDir.path}/order.json');
 
-      List<Map<String, dynamic>> orderList = songsList.map((song) => {'name': song['name']}).toList();
+      List<Map<String, dynamic>> orderList =
+          songsList.map((song) => {'name': song['name']}).toList();
       String orderContent = jsonEncode(orderList);
 
       await orderFile.writeAsString(orderContent);
@@ -198,8 +200,9 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color.fromARGB(184, 10, 10, 10),
         title: const Text('Confirm Delete',
-        style: TextStyle(color: Color.fromARGB(248, 244, 98, 98))),
-        content: const Text('Are you sure you want to delete all songs from this week?'),
+            style: TextStyle(color: Color.fromARGB(248, 244, 98, 98))),
+        content: const Text(
+            'Are you sure you want to delete all songs from this week?'),
         actions: [
           TextButton(
             child: const Text('Cancel'),
@@ -241,28 +244,31 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
   }
 
   void _viewSongImages(int index) {
-   Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => FullScreenImageView(
-      songs: songsList, // Replace with your songs data
-      initialSongIndex: index, // Replace with the selected song index
-    ),
-  ),
-);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FullScreenImageView(
+          songs: songsList, // Replace with your songs data
+          initialSongIndex: index, // Replace with the selected song index
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.deepPurple,
+      backgroundColor: Colors.deepPurple[100],
       appBar: AppBar(
-        backgroundColor: Colors.deepPurple,
-        title: const Text('This Week Songs', style: TextStyle(color: Color.fromARGB(247, 243, 243, 243))),
+        elevation: 0,
+        backgroundColor: Colors.deepPurple[400],
+        title: const Text('This Week Songs',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(isReorderMode ? Icons.check : Icons.edit, color: Colors.white),
+            icon: Icon(isReorderMode ? Icons.check : Icons.edit,
+                color: Colors.white),
             onPressed: _toggleReorderMode,
           ),
         ],
@@ -286,12 +292,14 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
               return isReorderMode
                   ? ReorderableListView.builder(
                       itemCount: songsList.length,
-                      itemBuilder: (context, index) => _buildSongTile(songsList[index], true),
+                      itemBuilder: (context, index) =>
+                          _buildSongTile(songsList[index], true),
                       onReorder: _onReorder,
                     )
                   : ListView.builder(
                       itemCount: songsList.length,
-                      itemBuilder: (context, index) => _buildSongTile(songsList[index], false),
+                      itemBuilder: (context, index) =>
+                          _buildSongTile(songsList[index], false),
                     );
             }
           }
@@ -299,8 +307,8 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _confirmDeleteAllSongs,
-        backgroundColor: const Color.fromARGB(255, 223, 94, 85),
-        child: const Icon(Icons.delete),
+        backgroundColor: Colors.red[400],
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
     );
   }
@@ -315,28 +323,36 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: const Color.fromARGB(40, 218, 207, 237).withOpacity(0.1),
-            blurRadius: 5,
+            color: Colors.deepPurple.withOpacity(0.1),
+            blurRadius: 8,
             offset: const Offset(0, 3),
           ),
         ],
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: Colors.deepPurple,
-          child: Text('${song['number']}', style: const TextStyle(color: Colors.white)),
+          backgroundColor: Colors.deepPurple[400],
+          child: Text('${song['number']}',
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold)),
         ),
         title: Text(
           song['name'],
-          style: const TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.deepPurple[800],
+              fontSize: 16),
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text('${song['images'].length} pages'),
+        subtitle: Text('${song['images'].length} pages',
+            style: TextStyle(
+                color: Colors.deepPurple[400], fontWeight: FontWeight.w500)),
         trailing: isReorderMode
-            ? const Icon(Icons.drag_handle)
+            ? Icon(Icons.drag_handle, color: Colors.deepPurple[300])
             : Checkbox(
+                activeColor: Colors.deepPurple[400],
                 value: song['checked'],
                 onChanged: (bool? value) {
                   setState(() {
@@ -345,7 +361,9 @@ class _ThisWeekPageState extends State<ThisWeekPage> {
                   });
                 },
               ),
-        onTap: isReorderMode ? null : () => _viewSongImages(songsList.indexOf(song)),
+        onTap: isReorderMode
+            ? null
+            : () => _viewSongImages(songsList.indexOf(song)),
       ),
     );
   }
